@@ -40,7 +40,7 @@ func main() {
 	ctx := context.Background()
 
 	// Migrate the schema
-	err = db.AutoMigrate(&File{}, &Tag{})
+	err = db.AutoMigrate(&File{}, &Tag{}, &User{})
 	if err != nil {
 		panic("failed to run database migrations")
 	}

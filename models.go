@@ -17,3 +17,11 @@ type Tag struct {
 	Name  string
 	Files []File `gorm:"many2many:user_tags;"`
 }
+
+type User struct {
+	gorm.Model
+	Email			string
+	Password	string  `gorm:"uniqueIndex"`
+	
+	Files			[]File
+}
