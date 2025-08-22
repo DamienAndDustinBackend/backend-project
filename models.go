@@ -10,6 +10,7 @@ type File struct {
 	Description string
 	FilePath    string
 	Tags        []Tag `gorm:"many2many:user_tags;"`
+	UserId      uint8
 }
 
 type Tag struct {
@@ -20,8 +21,8 @@ type Tag struct {
 
 type User struct {
 	gorm.Model
-	Email			string
-	Password	string  `gorm:"uniqueIndex"`
-	
-	Files			[]File
+	Email    string
+	Password string `gorm:"uniqueIndex"`
+
+	Files []File
 }
