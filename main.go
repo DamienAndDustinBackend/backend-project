@@ -2,9 +2,14 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/backend-project/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 var currentClaims jwt.Claims
@@ -135,6 +140,38 @@ func logout(c *gin.Context) {
 }
 func main() {
 	fmt.Println("Setting up router...")
+	environment := os.Getenv("ENVIRONMENT")
+	if environment == "" {
+		environment = "PRODUCTION"
+	}
+	fmt.Printf("Running in %s\n", environment)
+
+	var db *gorm.DB
+	var err error
+	if environment == "TEST" {
+		fmt.Println("Using SQLite.")
+		db, err = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+		if err != nil {
+			panic("failed to connect database")
+		}
+	} else {
+		fmt.Println("Using MySQL.")
+		dsn := os.Getenv("DSN")
+		if dsn == "" {
+			panic("DSN environment variable not set.")
+		}
+		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		if err != nil {
+			panic("failed to connect database")
+		}
+	}
+
+	// Migrate the schema
+	err = db.AutoMigrate(&File{}, &Tag{}, &User{})
+	if err != nil {
+		panic("failed to run database migrations")
+	}
+
 	router := gin.Default()
 
 	// auth
@@ -143,7 +180,7 @@ func main() {
 	router.GET("/logout", logout)
 
 	fmt.Println("Running on localhost:8080")
-	err := router.Run("localhost:8080")
+	err = router.Run("localhost:8080")
 	if err != nil {
 		panic(err)
 	}
