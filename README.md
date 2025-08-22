@@ -1,4 +1,5 @@
 # backend-project
+![build-test-lint](https://github.com/DamienAndDustinBackend/backend-project/actions/workflows/built-test-lint.yml/badge.svg?branch=main)
 
 ## Endpoints
 

@@ -138,7 +138,8 @@ func login(c *gin.Context) {
 func logout(c *gin.Context) {
 	c.SetCookie("token", "", -1, "/", "localhost", false, true)
 }
-func main() {
+
+func setupRouter() *gin.Engine {
 	fmt.Println("Setting up router...")
 	environment := os.Getenv("ENVIRONMENT")
 	if environment == "" {
@@ -174,13 +175,23 @@ func main() {
 
 	router := gin.Default()
 
+	router.GET("/ping", func(c *gin.Context) {
+		c.String(200, "pong")
+	})
+
 	// auth
 	router.POST("/register", register)
 	router.POST("/login", login)
 	router.GET("/logout", logout)
 
+	return router
+}
+
+func main() {
+	router := setupRouter()
+
 	fmt.Println("Running on localhost:8080")
-	err = router.Run("localhost:8080")
+	err := router.Run("localhost:8080")
 	if err != nil {
 		panic(err)
 	}
