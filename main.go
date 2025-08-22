@@ -3,10 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/backend-project/auth"
-	"github.com/backend-project/models"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/gin-gonic/gin"
-	"net/http"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var currentClaims jwt.Claims
@@ -40,96 +38,96 @@ func authMiddleware(c *gin.Context) {
 }
 
 func register(c *gin.Context) {
-	var user models.User
-
-	if err := c.BindJSON(&user); err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
-	} else {
-		// check if email already exists
-		users := models.GetUsers()
-
-		if users != nil && len(users) > 0 {
-			for _, foundUser := range users {
-				if foundUser.Email == user.Email {
-					c.AbortWithStatus(http.StatusFound)
-					return
-				}
-			}
-		}
-
-		// hash password
-		hash, err := auth.HashPassword(user.Password)
-
-		if err != nil {
-			c.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
-
-		user.Password = hash
-
-		models.Register(user)
-		// generate JWT so we don't have to login again for 1 hour
-		tokenString, err := auth.GenerateJWT(user.Email)
-
-		if err != nil {
-			c.String(http.StatusInternalServerError, "Error creating JWT")
-			return
-		}
-
-		fmt.Printf("JWT created: %s\n", tokenString)
-		c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
-		// redirect to home page from login page
-		//c.Redirect(http.StatusSeeOther, "/")
-		c.IndentedJSON(http.StatusCreated, user)
-	}
+	//var user models.User
+	//
+	//if err := c.BindJSON(&user); err != nil {
+	//	c.AbortWithStatus(http.StatusBadRequest)
+	//} else {
+	//	// check if email already exists
+	//	users := models.GetUsers()
+	//
+	//	if users != nil && len(users) > 0 {
+	//		for _, foundUser := range users {
+	//			if foundUser.Email == user.Email {
+	//				c.AbortWithStatus(http.StatusFound)
+	//				return
+	//			}
+	//		}
+	//	}
+	//
+	//	// hash password
+	//	hash, err := auth.HashPassword(user.Password)
+	//
+	//	if err != nil {
+	//		c.AbortWithStatus(http.StatusInternalServerError)
+	//		return
+	//	}
+	//
+	//	user.Password = hash
+	//
+	//	models.Register(user)
+	//	// generate JWT so we don't have to login again for 1 hour
+	//	tokenString, err := auth.GenerateJWT(user.Email)
+	//
+	//	if err != nil {
+	//		c.String(http.StatusInternalServerError, "Error creating JWT")
+	//		return
+	//	}
+	//
+	//	fmt.Printf("JWT created: %s\n", tokenString)
+	//	c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
+	//	// redirect to home page from login page
+	//	//c.Redirect(http.StatusSeeOther, "/")
+	//	c.IndentedJSON(http.StatusCreated, user)
+	//}
 }
 
 func login(c *gin.Context) {
-	var user models.User
-
-	if err := c.BindJSON(&user); err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
-	} else {
-		// check if email is in database
-		emailExists, err := models.EmailExists(user.Email)
-
-		if err != nil {
-			c.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
-
-		if !emailExists {
-			c.String(http.StatusUnauthorized, "Invalid Credentials")
-		} else {
-			// check if password is correct
-			hashedPassword, err := models.GetUserPassword(user.Email)
-
-			if err != nil {
-				c.AbortWithStatus(http.StatusInternalServerError)
-				return
-			}
-
-			correctPassword := auth.CheckPasswordHash(user.Password, hashedPassword)
-
-			if !correctPassword {
-				c.String(http.StatusUnauthorized, "Invalid Credentials")
-				return
-			} else {
-				// generate JWT so we don't have to login again for 1 hour
-				tokenString, err := auth.GenerateJWT(user.Email)
-
-				if err != nil {
-					c.String(http.StatusInternalServerError, "Error creating JWT")
-					return
-				}
-
-				fmt.Printf("JWT created: %s\n", tokenString)
-				c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
-				// redirect to home page from login page
-				//c.Redirect(http.StatusSeeOther, "/")
-			}
-		}
-	}
+	//var user models.User
+	//
+	//if err := c.BindJSON(&user); err != nil {
+	//	c.AbortWithStatus(http.StatusBadRequest)
+	//} else {
+	//	// check if email is in database
+	//	emailExists, err := models.EmailExists(user.Email)
+	//
+	//	if err != nil {
+	//		c.AbortWithStatus(http.StatusInternalServerError)
+	//		return
+	//	}
+	//
+	//	if !emailExists {
+	//		c.String(http.StatusUnauthorized, "Invalid Credentials")
+	//	} else {
+	//		// check if password is correct
+	//		hashedPassword, err := models.GetUserPassword(user.Email)
+	//
+	//		if err != nil {
+	//			c.AbortWithStatus(http.StatusInternalServerError)
+	//			return
+	//		}
+	//
+	//		correctPassword := auth.CheckPasswordHash(user.Password, hashedPassword)
+	//
+	//		if !correctPassword {
+	//			c.String(http.StatusUnauthorized, "Invalid Credentials")
+	//			return
+	//		} else {
+	//			// generate JWT so we don't have to login again for 1 hour
+	//			tokenString, err := auth.GenerateJWT(user.Email)
+	//
+	//			if err != nil {
+	//				c.String(http.StatusInternalServerError, "Error creating JWT")
+	//				return
+	//			}
+	//
+	//			fmt.Printf("JWT created: %s\n", tokenString)
+	//			c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
+	//			// redirect to home page from login page
+	//			//c.Redirect(http.StatusSeeOther, "/")
+	//		}
+	//	}
+	//}
 }
 
 func logout(c *gin.Context) {
@@ -145,5 +143,8 @@ func main() {
 	router.GET("/logout", logout)
 
 	fmt.Println("Running on localhost:8080")
-	router.Run("localhost:8080")
+	err := router.Run("localhost:8080")
+	if err != nil {
+		panic(err)
+	}
 }
