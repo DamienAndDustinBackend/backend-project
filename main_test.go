@@ -15,7 +15,21 @@ import (
 	"gorm.io/gorm"
 )
 
+func cleanUp() {
+	err := os.Remove("./test.db")
+	if err != nil {
+		panic(err)
+	}
+
+	err = os.RemoveAll("./files")
+	if err != nil {
+		panic(err)
+	}
+}
+
 func TestPingRoute(t *testing.T) {
+	defer cleanUp()
+
 	err := os.Setenv("ENVIRONMENT", "TEST")
 	if err != nil {
 		panic(err)
@@ -33,6 +47,8 @@ func TestPingRoute(t *testing.T) {
 }
 
 func TestUploadFileRoute(t *testing.T) {
+	defer cleanUp()
+
 	err := os.Setenv("ENVIRONMENT", "TEST")
 	if err != nil {
 		panic(err)

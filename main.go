@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"net/http"
 
 	"github.com/backend-project/auth"
 	"github.com/gin-gonic/gin"
@@ -79,7 +78,6 @@ func (app *App) register(c *gin.Context) {
 		}
 
 		user.Password = hash
-
 
 		app.db.Create(&user)
 		// generate JWT so we don't have to login again for 1 hour
