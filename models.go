@@ -21,8 +21,8 @@ type Tag struct {
 
 type User struct {
 	gorm.Model
-	Email    string
-	Password string `gorm:"uniqueIndex"`
+	Email    string `gorm:"uniqueIndex"`
+	Password string
 
 	Files []File
 }
