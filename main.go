@@ -42,7 +42,11 @@ func authMiddleware(c *gin.Context) {
 	c.Next()
 }
 
-func register(c *gin.Context) {
+type App struct {
+	db *gorm.DB
+}
+
+func (app *App) register(c *gin.Context) {
 	//var user models.User
 	//
 	//if err := c.BindJSON(&user); err != nil {
@@ -87,7 +91,7 @@ func register(c *gin.Context) {
 	//}
 }
 
-func login(c *gin.Context) {
+func (app *App) login(c *gin.Context) {
 	//var user models.User
 	//
 	//if err := c.BindJSON(&user); err != nil {
@@ -135,8 +139,11 @@ func login(c *gin.Context) {
 	//}
 }
 
-func logout(c *gin.Context) {
+func (app *App) logout(c *gin.Context) {
 	c.SetCookie("token", "", -1, "/", "localhost", false, true)
+}
+
+func (app *App) getFiles(c *gin.Context) {
 }
 
 func setupRouter() *gin.Engine {
@@ -179,11 +186,15 @@ func setupRouter() *gin.Engine {
 		c.String(200, "pong")
 	})
 
-	// auth
-	router.POST("/register", register)
-	router.POST("/login", login)
-	router.GET("/logout", logout)
+	app := App{db: db}
 
+	// auth
+	router.POST("/register", app.register)
+	router.POST("/login", app.login)
+	router.GET("/logout", app.logout)
+
+	// files crud
+	router.GET("/files", app.getFiles)
 	return router
 }
 
