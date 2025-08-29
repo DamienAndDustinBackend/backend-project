@@ -221,6 +221,8 @@ func (app *App) createFile(c *gin.Context) {
 }
 
 func (app *App) setupRouter() *gin.Engine {
+func setupRouter() *gin.Engine {
+	godotenv.Load()
 	fmt.Println("Setting up router...")
 
 	router := gin.Default()
