@@ -53,7 +53,7 @@ type App struct {
 
 func (app *App) register(c *gin.Context) {
 	var user User
-
+	
 	if err := c.BindJSON(&user); err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 	} else {
@@ -69,26 +69,27 @@ func (app *App) register(c *gin.Context) {
 				}
 			}
 		}
-
+	
 		// hash password
 		hash, err := auth.HashPassword(user.Password)
-
+	
 		if err != nil {
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
-
+	
 		user.Password = hash
+	
 
 		app.db.Create(&user)
 		// generate JWT so we don't have to login again for 1 hour
 		tokenString, err := auth.GenerateJWT(user.Email)
-
+	
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Error creating JWT")
 			return
 		}
-
+	
 		fmt.Printf("JWT created: %s\n", tokenString)
 		c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
 		// redirect to home page from login page
@@ -99,39 +100,39 @@ func (app *App) register(c *gin.Context) {
 
 func (app *App) login(c *gin.Context) {
 	var user User
-
+	
 	if err := c.BindJSON(&user); err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 	} else {
 		// check if email is in database
 		var user User
 		result := app.db.Where("email = ?", user.Email)
-
+	
 		if result.Error != nil {
 			c.String(http.StatusUnauthorized, "Invalid Credentials")
 		} else {
 			// check if password is correct
 			hashedPassword := user.Password
-
+	
 			if err != nil {
 				c.AbortWithStatus(http.StatusInternalServerError)
 				return
 			}
-
+	
 			correctPassword := auth.CheckPasswordHash(user.Password, hashedPassword)
-
+	
 			if !correctPassword {
 				c.String(http.StatusUnauthorized, "Invalid Credentials")
 				return
 			} else {
 				// generate JWT so we don't have to login again for 1 hour
 				tokenString, err := auth.GenerateJWT(user.Email)
-
+	
 				if err != nil {
 					c.String(http.StatusInternalServerError, "Error creating JWT")
 					return
 				}
-
+	
 				fmt.Printf("JWT created: %s\n", tokenString)
 				c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
 				// redirect to home page from login page
