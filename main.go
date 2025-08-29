@@ -11,6 +11,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"github.com/joho/godotenv"
 )
 
 var currentClaims jwt.Claims
@@ -146,6 +147,7 @@ func (app *App) getFiles(c *gin.Context) {
 }
 
 func setupRouter() *gin.Engine {
+	godotenv.Load()
 	fmt.Println("Setting up router...")
 	environment := os.Getenv("ENVIRONMENT")
 	if environment == "" {
