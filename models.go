@@ -1,28 +1,39 @@
 package main
 
 import (
+	"time"
+
 	"gorm.io/gorm"
 )
 
 type File struct {
-	gorm.Model
-	Name        string
-	Description string
-	FilePath    string
-	Tags        []Tag `gorm:"many2many:user_tags;"`
-	UserId      uint8
+	ID          uint           `gorm:"primarykey;serializer:json"`
+	CreatedAt   time.Time      `gorm:"serializer:json"`
+	UpdatedAt   time.Time      `gorm:"serializer:json"`
+	DeletedAt   gorm.DeletedAt `gorm:"index;serializer:json"`
+	Name        string         `gorm:"serializer:json"`
+	Description string         `gorm:"serializer:json"`
+	FilePath    string         `gorm:"index;serializer:json"`
+	Tags        []Tag          `gorm:"many2many:user_tags;serializer:json"`
+	UserId      uint8          `gorm:"serializer:json"`
 }
 
 type Tag struct {
-	gorm.Model
-	Name  string
-	Files []File `gorm:"many2many:user_tags;"`
+	ID        uint           `gorm:"primarykey;serializer:json"`
+	CreatedAt time.Time      `gorm:"serializer:json"`
+	UpdatedAt time.Time      `gorm:"serializer:json"`
+	DeletedAt gorm.DeletedAt `gorm:"index;serializer:json"`
+	Name      string         `gorm:"serializer:json"`
+	Files     []File         `gorm:"many2many:user_tags;serializer:json"`
 }
 
 type User struct {
-	gorm.Model
-	Email    string `gorm:"uniqueIndex"`
-	Password string
+	ID        uint           `gorm:"primarykey;serializer:json"`
+	CreatedAt time.Time      `gorm:"serializer:json"`
+	UpdatedAt time.Time      `gorm:"serializer:json"`
+	DeletedAt gorm.DeletedAt `gorm:"index;serializer:json"`
+	Email     string         `gorm:"uniqueIndex;serializer:json"`
+	Password  string         `gorm:"uniqueIndex;serializer:json"`
 
 	Files []File
 }

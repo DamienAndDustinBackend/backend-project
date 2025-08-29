@@ -1,13 +1,17 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
+	"path/filepath"
 	"net/http"
 
 	"github.com/backend-project/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -50,7 +54,7 @@ type App struct {
 
 func (app *App) register(c *gin.Context) {
 	var user User
-	
+
 	if err := c.BindJSON(&user); err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 	} else {
@@ -66,27 +70,27 @@ func (app *App) register(c *gin.Context) {
 				}
 			}
 		}
-	
+
 		// hash password
 		hash, err := auth.HashPassword(user.Password)
-	
+
 		if err != nil {
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
-	
+
 		user.Password = hash
-	
+
 
 		app.db.Create(&user)
 		// generate JWT so we don't have to login again for 1 hour
 		tokenString, err := auth.GenerateJWT(user.Email)
-	
+
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Error creating JWT")
 			return
 		}
-	
+
 		fmt.Printf("JWT created: %s\n", tokenString)
 		c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
 		// redirect to home page from login page
@@ -97,39 +101,39 @@ func (app *App) register(c *gin.Context) {
 
 func (app *App) login(c *gin.Context) {
 	var user User
-	
+
 	if err := c.BindJSON(&user); err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 	} else {
 		// check if email is in database
 		var user User
 		result := app.db.Where("email = ?", user.Email)
-	
+
 		if result.Error != nil {
 			c.String(http.StatusUnauthorized, "Invalid Credentials")
 		} else {
 			// check if password is correct
 			hashedPassword := user.Password
-	
+
 			if err != nil {
 				c.AbortWithStatus(http.StatusInternalServerError)
 				return
 			}
-	
+
 			correctPassword := auth.CheckPasswordHash(user.Password, hashedPassword)
-	
+
 			if !correctPassword {
 				c.String(http.StatusUnauthorized, "Invalid Credentials")
 				return
 			} else {
 				// generate JWT so we don't have to login again for 1 hour
 				tokenString, err := auth.GenerateJWT(user.Email)
-	
+
 				if err != nil {
 					c.String(http.StatusInternalServerError, "Error creating JWT")
 					return
 				}
-	
+
 				fmt.Printf("JWT created: %s\n", tokenString)
 				c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
 				// redirect to home page from login page
@@ -146,9 +150,99 @@ func (app *App) logout(c *gin.Context) {
 func (app *App) getFiles(c *gin.Context) {
 }
 
-func setupRouter() *gin.Engine {
-	godotenv.Load()
+func (app *App) doesFileNameExist(ctx *gin.Context, fileName string) bool {
+	_, err := gorm.G[File](app.db).Where("file_path LIKE ?", fileName).First(ctx)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false
+		}
+		panic(err)
+	} else {
+		return true
+	}
+}
+
+func (app *App) generateUniqueFileName(ctx *gin.Context) string {
+	uniqueName := uuid.New().String()
+
+	// Timestamp?
+
+	// I'm not sure if this is necessary, but I'm not sure if the uuid is really guaranteed to be unique
+	for app.doesFileNameExist(ctx, uniqueName) {
+		uniqueName = uuid.New().String()
+	}
+
+	return uniqueName
+}
+
+func (app *App) createFile(c *gin.Context) {
+
+	uploadedFile, err := c.FormFile("file")
+	fileName := c.PostForm("name")
+	fileDescription := c.DefaultPostForm("description", "")
+	//tags := c.DefaultPostForm("tags", "[]")
+	//tagStructs := []Tag{}
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	uploadPath := os.Getenv("UPLOAD_PATH")
+	if uploadPath == "" {
+		uploadPath = "./files"
+	}
+
+	uniqueFileName := filepath.Base(app.generateUniqueFileName(c))
+
+	err = c.SaveUploadedFile(uploadedFile, fmt.Sprintf("%s/%s", uploadPath, uniqueFileName))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	file := File{Name: fileName, Description: fileDescription, FilePath: uniqueFileName, Tags: []Tag{}}
+	err = gorm.G[File](app.db).Create(
+		c,
+		&file,
+	)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// I'm querying the database here to get the updatedAt, createdAt, timestamps
+	fileFromDatabase, err := gorm.G[File](app.db).Where(&File{ID: file.ID}).First(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, fileFromDatabase)
+}
+
+func (app *App) setupRouter() *gin.Engine {
 	fmt.Println("Setting up router...")
+
+	router := gin.Default()
+	router.MaxMultipartMemory = 10 * 1_073_741_824 // 10 GiB
+
+	router.GET("/ping", func(c *gin.Context) {
+		c.String(200, "pong")
+	})
+
+	// auth
+	router.POST("/register", app.register)
+	router.POST("/login", app.login)
+	router.GET("/logout", app.logout)
+
+	// files crud
+	router.GET("/files", app.getFiles)
+	router.POST("/files", app.createFile)
+	return router
+}
+
+func setupDatabase() *gorm.DB {
 	environment := os.Getenv("ENVIRONMENT")
 	if environment == "" {
 		environment = "PRODUCTION"
@@ -181,26 +275,13 @@ func setupRouter() *gin.Engine {
 		panic("failed to run database migrations")
 	}
 
-	router := gin.Default()
-
-	router.GET("/ping", func(c *gin.Context) {
-		c.String(200, "pong")
-	})
-
-	app := App{db: db}
-
-	// auth
-	router.POST("/register", app.register)
-	router.POST("/login", app.login)
-	router.GET("/logout", app.logout)
-
-	// files crud
-	router.GET("/files", app.getFiles)
-	return router
+	return db
 }
 
 func main() {
-	router := setupRouter()
+	db := setupDatabase()
+	app := App{db: db}
+	router := app.setupRouter()
 
 	fmt.Println("Running on localhost:8080")
 	err := router.Run("localhost:8080")
