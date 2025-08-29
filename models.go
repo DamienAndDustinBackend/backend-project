@@ -32,7 +32,7 @@ type User struct {
 	CreatedAt time.Time      `gorm:"serializer:json"`
 	UpdatedAt time.Time      `gorm:"serializer:json"`
 	DeletedAt gorm.DeletedAt `gorm:"index;serializer:json"`
-	Email     string         `gorm:"serializer:json"`
+	Email     string         `gorm:"uniqueIndex;serializer:json"`
 	Password  string         `gorm:"uniqueIndex;serializer:json"`
 
 	Files []File
