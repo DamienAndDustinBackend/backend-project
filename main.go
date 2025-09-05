@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -219,6 +220,7 @@ func (app *App) createFile(c *gin.Context) {
 }
 
 func (app *App) setupRouter() *gin.Engine {
+	godotenv.Load()
 	fmt.Println("Setting up router...")
 
 	router := gin.Default()
