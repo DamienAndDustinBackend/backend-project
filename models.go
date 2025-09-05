@@ -7,33 +7,35 @@ import (
 )
 
 type File struct {
-	ID          uint           `gorm:"primarykey;serializer:json"`
-	CreatedAt   time.Time      `gorm:"serializer:json"`
-	UpdatedAt   time.Time      `gorm:"serializer:json"`
-	DeletedAt   gorm.DeletedAt `gorm:"index;serializer:json"`
-	Name        string         `gorm:"serializer:json"`
-	Description string         `gorm:"serializer:json"`
-	FilePath    string         `gorm:"index;serializer:json"`
-	Tags        []Tag          `gorm:"many2many:user_tags;serializer:json"`
-	UserId      uint8          `gorm:"serializer:json"`
+	gorm.Model
+	ID          uint           `gorm:"primarykey"`
+	CreatedAt   time.Time      ``
+	UpdatedAt   time.Time      ``
+	DeletedAt   gorm.DeletedAt `gorm:"index"`
+	Name        string         ``
+	Description string         ``
+	FilePath    string         `gorm:"index"`
+	Tags        []Tag          `gorm:"many2many:user_tags"`
+	UserId      uint8          ``
 }
 
 type Tag struct {
-	ID        uint           `gorm:"primarykey;serializer:json"`
-	CreatedAt time.Time      `gorm:"serializer:json"`
-	UpdatedAt time.Time      `gorm:"serializer:json"`
-	DeletedAt gorm.DeletedAt `gorm:"index;serializer:json"`
-	Name      string         `gorm:"serializer:json"`
-	Files     []File         `gorm:"many2many:user_tags;serializer:json"`
+	ID        uint           `gorm:"primarykey"`
+	CreatedAt time.Time      ``
+	UpdatedAt time.Time      ``
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+	Name      string         ``
+
+	Files []File `gorm:"many2many:user_tags"`
 }
 
 type User struct {
-	ID        uint           `gorm:"primarykey;serializer:json"`
-	CreatedAt time.Time      `gorm:"serializer:json"`
-	UpdatedAt time.Time      `gorm:"serializer:json"`
-	DeletedAt gorm.DeletedAt `gorm:"index;serializer:json"`
-	Email     string         `gorm:"uniqueIndex;serializer:json"`
-	Password  string         `gorm:"serializer:json"`
+	ID        uint           `gorm:"primarykey"`
+	CreatedAt time.Time      ``
+	UpdatedAt time.Time      ``
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+	Email     string         `gorm:"uniqueIndex" json:"email"`
+	Password  string         ``
 
 	Files []File
 }

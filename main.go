@@ -55,6 +55,7 @@ func (app *App) register(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 	} else {
 		// check if email already exists
+		// TODO: change this to use .Where("email = ?", user.Email)
 		var users []User
 		result := app.db.Find(&users)
 
@@ -77,7 +78,11 @@ func (app *App) register(c *gin.Context) {
 
 		user.Password = hash
 
-		app.db.Create(&user)
+		tx := app.db.Create(&user)
+		if tx.Error != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": tx.Error.Error()})
+			return
+		}
 		// generate JWT so we don't have to login again for 1 hour
 		tokenString, err := auth.GenerateJWT(user.Email)
 
@@ -90,7 +95,11 @@ func (app *App) register(c *gin.Context) {
 		c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
 		// redirect to home page from login page
 		//c.Redirect(http.StatusSeeOther, "/")
-		c.IndentedJSON(http.StatusCreated, user)
+
+		// TODO: There must be a better way of doing this, just don't want to return the hash
+		user.Password = ""
+
+		c.JSON(http.StatusCreated, user)
 	}
 }
 
@@ -101,19 +110,13 @@ func (app *App) login(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 	} else {
 		// check if email is in database
-		var user User
-		result := app.db.Where("email = ?", user.Email)
+		databaseUser, err := gorm.G[User](app.db).Where("email = ?", user.Email).First(c)
 
-		if result.Error != nil {
+		if err != nil {
 			c.String(http.StatusUnauthorized, "Invalid Credentials")
 		} else {
 			// check if password is correct
-			hashedPassword := user.Password
-
-			if err != nil {
-				c.AbortWithStatus(http.StatusInternalServerError)
-				return
-			}
+			hashedPassword := databaseUser.Password
 
 			correctPassword := auth.CheckPasswordHash(user.Password, hashedPassword)
 
@@ -131,6 +134,7 @@ func (app *App) login(c *gin.Context) {
 
 				fmt.Printf("JWT created: %s\n", tokenString)
 				c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
+				c.JSON(http.StatusOK, gin.H{"success": true})
 				// redirect to home page from login page
 				//c.Redirect(http.StatusSeeOther, "/")
 			}
@@ -143,7 +147,11 @@ func (app *App) logout(c *gin.Context) {
 }
 
 func (app *App) setupRouter() *gin.Engine {
-	godotenv.Load()
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Failed to load .env file")
+	}
+
 	fmt.Println("Setting up router...")
 
 	router := gin.Default()

@@ -594,3 +594,108 @@ func TestUpdateFile(t *testing.T) {
 	assert.EqualValues(t, fetchedUpdatedFile.Name, updatedFile.Name)
 	assert.EqualValues(t, fetchedUpdatedFile.Description, updatedFile.Description)
 }
+
+func TestRegister(t *testing.T) {
+	defer cleanUp()
+
+	err := os.Setenv("ENVIRONMENT", "TEST")
+	if err != nil {
+		panic(err)
+	}
+	err = os.Setenv("JWT_SECRET", "very-secret")
+	if err != nil {
+		panic(err)
+	}
+	db := setupDatabase()
+	app := App{db: db}
+	router := app.setupRouter()
+
+	w := httptest.NewRecorder()
+
+	user := User{Email: "test@test.com", Password: "secret"}
+	userJson, _ := json.Marshal(user)
+	req, _ := http.NewRequest("POST", "/register", strings.NewReader(string(userJson)))
+	router.ServeHTTP(w, req)
+
+	fetchedUser, err := gorm.G[User](app.db).Where("email = ?", user.Email).First(context.TODO())
+	if err != nil {
+		panic(err)
+	}
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	var returnedUser User
+	err = json.Unmarshal(w.Body.Bytes(), &returnedUser)
+	fmt.Println(user)
+	if err != nil {
+		return
+	}
+	assert.Equal(t, user.Email, fetchedUser.Email)
+	assert.Equal(t, user.Email, returnedUser.Email)
+	assert.Equal(t, "token", w.Result().Cookies()[0].Name)
+}
+
+func TestLogin(t *testing.T) {
+	defer cleanUp()
+
+	err := os.Setenv("ENVIRONMENT", "TEST")
+	if err != nil {
+		panic(err)
+	}
+	err = os.Setenv("JWT_SECRET", "very-secret")
+	if err != nil {
+		panic(err)
+	}
+	db := setupDatabase()
+	app := App{db: db}
+	router := app.setupRouter()
+
+	// create a user (have to hit the endpoint, so the password gets hashed)
+	w := httptest.NewRecorder()
+	user := User{Email: "test@test.com", Password: "secret"}
+	userJson, _ := json.Marshal(user)
+	req, _ := http.NewRequest("POST", "/register", strings.NewReader(string(userJson)))
+	router.ServeHTTP(w, req)
+
+	w = httptest.NewRecorder()
+
+	req, _ = http.NewRequest("POST", "/login", strings.NewReader(string(userJson)))
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "{\"success\":true}", w.Body.String())
+	assert.Equal(t, "token", w.Result().Cookies()[0].Name)
+}
+
+func TestLogout(t *testing.T) {
+	defer cleanUp()
+
+	err := os.Setenv("ENVIRONMENT", "TEST")
+	if err != nil {
+		panic(err)
+	}
+	err = os.Setenv("JWT_SECRET", "very-secret")
+	if err != nil {
+		panic(err)
+	}
+	db := setupDatabase()
+	app := App{db: db}
+	router := app.setupRouter()
+
+	// create a user (have to hit the endpoint, so the password gets hashed)
+	w := httptest.NewRecorder()
+	user := User{Email: "test@test.com", Password: "secret"}
+	userJson, _ := json.Marshal(user)
+	req, _ := http.NewRequest("POST", "/register", strings.NewReader(string(userJson)))
+	router.ServeHTTP(w, req)
+	assert.Equal(t, "token", w.Result().Cookies()[0].Name)
+
+	cookie := w.Result().Cookies()[0]
+	w = httptest.NewRecorder()
+
+	req, _ = http.NewRequest("POST", "/logout", strings.NewReader(string(userJson)))
+	req.AddCookie(cookie)
+	router.ServeHTTP(w, req)
+
+	assert.Len(t, w.Result().Cookies(), 0)
+}
