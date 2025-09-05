@@ -160,6 +160,7 @@ func (app *App) setupRouter() *gin.Engine {
 	router.GET("/files/:id", app.getFile)
 	router.GET("/files", app.getFiles)
 	router.POST("/files", app.createFile)
+	router.PATCH("/files/:id", app.updateFile)
 	router.DELETE("/files/:id", app.deleteFile)
 	return router
 }

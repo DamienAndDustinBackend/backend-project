@@ -144,3 +144,21 @@ func (app *App) deleteFile(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
+
+func (app *App) updateFile(c *gin.Context) {
+	fileId := c.Param("id")
+
+	var file File
+	if err := c.BindJSON(&file); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	_, err := gorm.G[File](app.db).Where("id = ?", fileId).Updates(c, file)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
