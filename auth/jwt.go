@@ -1,11 +1,11 @@
 package auth
 
 import (
-	"time"
-	"os"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/joho/godotenv"
 )
 
 func getRole(email string) string {
@@ -14,15 +14,9 @@ func getRole(email string) string {
 	}
 
 	return "default"
-} 
+}
 
 func GenerateJWT(email string) (string, error) {
-	err := godotenv.Load()
-
-	if err != nil {
-		return "", fmt.Errorf("could not load .env")
-	}
-
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": email,
 		"iss": "snippet-app",
@@ -40,13 +34,7 @@ func GenerateJWT(email string) (string, error) {
 }
 
 func VerifyJWT(tokenString string) (*jwt.Token, error) {
-	err := godotenv.Load()
-
-	if err != nil {
-		return nil, fmt.Errorf("could not load .env")
-	}
-
-	token, err := jwt.Parse(tokenString, func (token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
 
