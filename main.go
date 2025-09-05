@@ -8,7 +8,6 @@ import (
 	"github.com/backend-project/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/sqlite"
