@@ -51,3 +51,15 @@ GET /files/user/<user_id>
 
 ### Return format
 {"success": "", "error": "", data: ""}
+
+## References
+
+https://gobyexample.com/
+
+https://go.dev/doc/tutorial/web-service-gin
+
+https://learn.microsoft.com/en-us/azure/architecture/best-practices/api-design
+
+https://gin-gonic.com/en/docs/testing/
+
+https://gobyexample.com/testing-and-benchmarking
