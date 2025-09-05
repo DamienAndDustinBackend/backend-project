@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/backend-project/auth"
 	"github.com/gin-gonic/gin"
@@ -144,7 +145,36 @@ func (app *App) logout(c *gin.Context) {
 	c.SetCookie("token", "", -1, "/", "localhost", false, true)
 }
 
+// Paginate https://gorm.io/docs/scopes.html#Pagination
+func Paginate(r *http.Request) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		q := r.URL.Query()
+		page, _ := strconv.Atoi(q.Get("page"))
+		if page <= 0 {
+			page = 1
+		}
+
+		pageSize, _ := strconv.Atoi(q.Get("page_size"))
+		switch {
+		case pageSize > 100:
+			pageSize = 100
+		case pageSize <= 0:
+			pageSize = 10
+		}
+
+		offset := (page - 1) * pageSize
+		return db.Offset(offset).Limit(pageSize)
+	}
+}
+
 func (app *App) getFiles(c *gin.Context) {
+	var files []File
+	result := app.db.Scopes(Paginate(c.Request)).Find(&files)
+	if result.Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+	}
+	c.JSON(http.StatusOK, files)
+	return
 }
 
 func (app *App) doesFileNameExist(ctx *gin.Context, fileName string) bool {
