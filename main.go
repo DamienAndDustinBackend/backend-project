@@ -2,142 +2,18 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 
 	"github.com/backend-project/auth"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-var currentClaims jwt.Claims
-
-func authMiddleware(c *gin.Context) {
-	// find the jwt from cookies
-	tokenString, err := c.Cookie("token")
-
-	if err != nil {
-		fmt.Println("JWT missing in cookies")
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
-
-	// verify jwt
-	token, err := auth.VerifyJWT(tokenString)
-
-	if err != nil {
-		fmt.Printf("JWT verification failed: %v\n", err)
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
-
-	currentClaims = token.Claims
-
-	fmt.Printf("JWT verified. Claims: %+v\\n", token.Claims)
-	// continue on to the next middleware / route handler
-	c.Next()
-}
-
 type App struct {
 	db *gorm.DB
-}
-
-func (app *App) register(c *gin.Context) {
-	var user User
-
-	if err := c.BindJSON(&user); err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
-	} else {
-		// check if email already exists
-		// TODO: change this to use .Where("email = ?", user.Email)
-		var users []User
-		result := app.db.Find(&users)
-
-		if result.Error == nil && len(users) > 0 {
-			for _, foundUser := range users {
-				if foundUser.Email == user.Email {
-					c.AbortWithStatus(http.StatusFound)
-					return
-				}
-			}
-		}
-
-		// hash password
-		hash, err := auth.HashPassword(user.Password)
-
-		if err != nil {
-			c.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
-
-		user.Password = hash
-
-		tx := app.db.Create(&user)
-		if tx.Error != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": tx.Error.Error()})
-			return
-		}
-		// generate JWT so we don't have to login again for 1 hour
-		tokenString, err := auth.GenerateJWT(user.Email)
-
-		if err != nil {
-			c.String(http.StatusInternalServerError, "Error creating JWT")
-			return
-		}
-
-		c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
-		// redirect to home page from login page
-		//c.Redirect(http.StatusSeeOther, "/")
-
-		// TODO: There must be a better way of doing this, just don't want to return the hash
-		user.Password = ""
-
-		c.JSON(http.StatusCreated, user)
-	}
-}
-
-func (app *App) login(c *gin.Context) {
-	var user User
-
-	if err := c.BindJSON(&user); err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
-	} else {
-		// check if email is in database
-		databaseUser, err := gorm.G[User](app.db).Where("email = ?", user.Email).First(c)
-
-		if err != nil {
-			c.String(http.StatusUnauthorized, "Invalid Credentials")
-		} else {
-			// check if password is correct
-			hashedPassword := databaseUser.Password
-
-			correctPassword := auth.CheckPasswordHash(user.Password, hashedPassword)
-
-			if !correctPassword {
-				c.String(http.StatusUnauthorized, "Invalid Credentials")
-				return
-			} else {
-				// generate JWT so we don't have to login again for 1 hour
-				tokenString, err := auth.GenerateJWT(user.Email)
-
-				if err != nil {
-					c.String(http.StatusInternalServerError, "Error creating JWT")
-					return
-				}
-
-				c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
-				c.JSON(http.StatusOK, gin.H{"success": true})
-			}
-		}
-	}
-}
-
-func (app *App) logout(c *gin.Context) {
-	c.SetCookie("token", "", -1, "/", "localhost", false, true)
 }
 
 func (app *App) setupRouter() *gin.Engine {
@@ -168,7 +44,7 @@ func (app *App) setupRouter() *gin.Engine {
 
 	// files
 	authorized := router.Group("/")
-	authorized.Use(authMiddleware)
+	authorized.Use(auth.AuthMiddleware)
 	authorized.GET("/files/:id", app.getFile)
 	authorized.GET("/files", app.getFiles)
 	authorized.POST("/files", app.createFile)
