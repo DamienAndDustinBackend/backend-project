@@ -203,7 +203,7 @@ func setupDatabase() *gorm.DB {
 	}
 
 	// Migrate the schema
-	err = db.AutoMigrate(&File{}, &Tag{}, &User{})
+	err = db.AutoMigrate(&User{}, &File{}, &Tag{})
 	if err != nil {
 		panic("failed to run database migrations")
 	}

@@ -15,7 +15,7 @@ type File struct {
 	Name        string         ``
 	Description string         ``
 	FilePath    string         `gorm:"index"`
-	Tags        []Tag          `gorm:"many2many:user_tags"`
+	Tags        []Tag          `gorm:"many2many:file_tags"`
 	UserId      uint8          ``
 }
 
@@ -26,7 +26,7 @@ type Tag struct {
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 	Name      string         ``
 
-	Files []File `gorm:"many2many:user_tags"`
+	Files []File `gorm:"many2many:file_tags"`
 }
 
 type User struct {
