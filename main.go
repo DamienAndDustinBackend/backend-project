@@ -90,7 +90,6 @@ func (app *App) register(c *gin.Context) {
 			return
 		}
 
-		fmt.Printf("JWT created: %s\n", tokenString)
 		c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
 		// redirect to home page from login page
 		//c.Redirect(http.StatusSeeOther, "/")
@@ -131,7 +130,6 @@ func (app *App) login(c *gin.Context) {
 					return
 				}
 
-				fmt.Printf("JWT created: %s\n", tokenString)
 				c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
 				c.JSON(http.StatusOK, gin.H{"success": true})
 			}
@@ -153,6 +151,8 @@ func (app *App) setupRouter() *gin.Engine {
 
 	router := gin.Default()
 	router.MaxMultipartMemory = 10 * 1_073_741_824 // 10 GiB
+
+	// https://gin-gonic.com/en/docs/deployment/#dont-trust-all-proxies
 	err = router.SetTrustedProxies(nil)
 	if err != nil {
 		panic(err)
