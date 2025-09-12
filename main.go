@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -191,12 +191,12 @@ func setupDatabase() *gorm.DB {
 			panic("failed to connect database")
 		}
 	} else {
-		fmt.Println("Using MySQL.")
+		fmt.Println("Using Postgres.")
 		dsn := os.Getenv("DSN")
 		if dsn == "" {
 			panic("DSN environment variable not set.")
 		}
-		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 		if err != nil {
 			panic("failed to connect database")
 		}
