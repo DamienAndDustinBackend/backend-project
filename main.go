@@ -167,15 +167,23 @@ func (app *App) setupRouter() *gin.Engine {
 	router.GET("/logout", app.logout)
 
 	// files
-	router.GET("/files/:id", app.getFile)
-	router.GET("/files", app.getFiles)
-	router.POST("/files", app.createFile)
-	router.PATCH("/files/:id", app.updateFile)
-	router.DELETE("/files/:id", app.deleteFile)
+	authorized := router.Group("/")
+	authorized.Use(authMiddleware)
+	{
+		authorized.GET("/files/:id", app.getFile)
+		authorized.GET("/files", app.getFiles)
+		authorized.POST("/files", app.createFile)
+		authorized.PATCH("/files/:id", app.updateFile)
+		authorized.DELETE("/files/:id", app.deleteFile)
+	}
 	return router
 }
 
 func setupDatabase() *gorm.DB {
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("Failed to load .env file")
+	}
+
 	environment := os.Getenv("ENVIRONMENT")
 	if environment == "" {
 		environment = "PRODUCTION"
