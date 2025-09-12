@@ -31,7 +31,6 @@ func authMiddleware(c *gin.Context) {
 
 	if err != nil {
 		fmt.Printf("JWT verification failed: %v\n", err)
-		//c.Redirect(http.StatusSeeOther, "/login")
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
