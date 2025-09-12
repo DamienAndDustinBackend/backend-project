@@ -215,9 +215,7 @@ func main() {
 	db := setupDatabase()
 	app := App{db: db}
 	router := app.setupRouter()
-
-	fmt.Println("Running on localhost:8080")
-	err := router.Run("localhost:8080")
+	err := router.Run(":8080")
 	if err != nil {
 		panic(err)
 	}
