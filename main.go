@@ -134,8 +134,6 @@ func (app *App) login(c *gin.Context) {
 				fmt.Printf("JWT created: %s\n", tokenString)
 				c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
 				c.JSON(http.StatusOK, gin.H{"success": true})
-				// redirect to home page from login page
-				//c.Redirect(http.StatusSeeOther, "/")
 			}
 		}
 	}
@@ -155,6 +153,10 @@ func (app *App) setupRouter() *gin.Engine {
 
 	router := gin.Default()
 	router.MaxMultipartMemory = 10 * 1_073_741_824 // 10 GiB
+	err = router.SetTrustedProxies(nil)
+	if err != nil {
+		panic(err)
+	}
 
 	router.GET("/ping", func(c *gin.Context) {
 		c.String(200, "pong")
@@ -216,7 +218,12 @@ func main() {
 	db := setupDatabase()
 	app := App{db: db}
 	router := app.setupRouter()
-	err := router.Run(":8080")
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	err := router.Run(":" + port)
 	if err != nil {
 		panic(err)
 	}

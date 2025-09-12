@@ -595,6 +595,10 @@ func TestUpdateFile(t *testing.T) {
 	assert.EqualValues(t, fetchedUpdatedFile.Description, updatedFile.Description)
 }
 
+func RegisterUser(db *gorm.DB, router gin.Router) {
+
+}
+
 func TestRegister(t *testing.T) {
 	defer cleanUp()
 
