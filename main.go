@@ -22,8 +22,7 @@ func authMiddleware(c *gin.Context) {
 
 	if err != nil {
 		fmt.Println("JWT missing in cookies")
-		//c.Redirect(http.StatusSeeOther, "/login")
-		c.Abort()
+		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 
@@ -33,7 +32,7 @@ func authMiddleware(c *gin.Context) {
 	if err != nil {
 		fmt.Printf("JWT verification failed: %v\n", err)
 		//c.Redirect(http.StatusSeeOther, "/login")
-		c.Abort()
+		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 
@@ -167,11 +166,13 @@ func (app *App) setupRouter() *gin.Engine {
 	router.GET("/logout", app.logout)
 
 	// files
-	router.GET("/files/:id", app.getFile)
-	router.GET("/files", app.getFiles)
-	router.POST("/files", app.createFile)
-	router.PATCH("/files/:id", app.updateFile)
-	router.DELETE("/files/:id", app.deleteFile)
+	filesGroup := router.Group("/")
+	filesGroup.Use(authMiddleware)
+	filesGroup.GET("/files/:id", app.getFile)
+	filesGroup.GET("/files", app.getFiles)
+	filesGroup.POST("/files", app.createFile)
+	filesGroup.PATCH("/files/:id", app.updateFile)
+	filesGroup.DELETE("/files/:id", app.deleteFile)
 	return router
 }
 
@@ -215,9 +216,7 @@ func main() {
 	db := setupDatabase()
 	app := App{db: db}
 	router := app.setupRouter()
-
-	fmt.Println("Running on localhost:8080")
-	err := router.Run("localhost:8080")
+	err := router.Run(":8080")
 	if err != nil {
 		panic(err)
 	}
