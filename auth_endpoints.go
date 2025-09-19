@@ -3,7 +3,6 @@ package main
 import (
 	"net/http"
 
-	"github.com/backend-project/auth"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -29,7 +28,7 @@ func (app *App) register(c *gin.Context) {
 		}
 
 		// hash password
-		hash, err := auth.HashPassword(user.Password)
+		hash, err := HashPassword(user.Password)
 
 		if err != nil {
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -77,7 +76,7 @@ func (app *App) login(c *gin.Context) {
 			// check if password is correct
 			hashedPassword := databaseUser.Password
 
-			correctPassword := auth.CheckPasswordHash(user.Password, hashedPassword)
+			correctPassword := CheckPasswordHash(user.Password, hashedPassword)
 
 			if !correctPassword {
 				c.String(http.StatusUnauthorized, "Invalid Credentials")
