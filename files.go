@@ -36,6 +36,13 @@ func Paginate(r *http.Request) func(db *gorm.DB) *gorm.DB {
 	}
 }
 
+// @Summary Get a list of files for the authenticated user
+// @Description Get a list of files for the authenticated user. The user is identified by the token in the cookie.
+// @Tags files
+// @Produce  json
+// @Success 200 {array} File
+// @Failure 400
+// @Router /files [get]
 func (app *App) getFiles(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 
@@ -73,6 +80,18 @@ func (app *App) generateUniqueFileName(ctx *gin.Context) string {
 	return uniqueName
 }
 
+// @Summary Create a new file
+// @Description Create a new file for the authenticated user. The user is identified by the token in the cookie.
+// @Tags files
+// @Accept  multipart/form-data
+// @Produce  json
+// @Param file formData file true "File to upload"
+// @Param name formData string true "Name of the file"
+// @Param description formData string false "Description of the file"
+// @Param tags formData string false "Comma-separated list of tag IDs"
+// @Success 200 {object} File
+// @Failure 400
+// @Router /files [post]
 func (app *App) createFile(c *gin.Context) {
 
 	user := c.MustGet(ContextUserKey).(*User)
@@ -147,6 +166,14 @@ func (app *App) createFile(c *gin.Context) {
 	c.JSON(http.StatusOK, fileFromDatabase)
 }
 
+// @Summary Get a file by ID
+// @Description Get a file by ID for the authenticated user. The user is identified by the token in the cookie.
+// @Tags files
+// @Produce  json
+// @Param id path int true "File ID"
+// @Success 200 {object} File
+// @Failure 400
+// @Router /files/{id} [get]
 func (app *App) getFile(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 
@@ -173,6 +200,14 @@ func (app *App) getFile(c *gin.Context) {
 	c.JSON(http.StatusOK, file)
 }
 
+// @Summary Delete a file by ID
+// @Description Delete a file by ID for the authenticated user. The user is identified by the token in the cookie.
+// @Tags files
+// @Produce  json
+// @Param id path int true "File ID"
+// @Success 200 {object} object
+// @Failure 400
+// @Router /files/{id} [delete]
 func (app *App) deleteFile(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 
@@ -194,6 +229,16 @@ func (app *App) deleteFile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
+// @Summary Update a file by ID
+// @Description Update a file by ID for the authenticated user. The user is identified by the token in the cookie.
+// @Tags files
+// @Accept  json
+// @Produce  json
+// @Param id path int true "File ID"
+// @Param file body File true "File object that needs to be updated"
+// @Success 200 {object} object
+// @Failure 400
+// @Router /files/{id} [patch]
 func (app *App) updateFile(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 

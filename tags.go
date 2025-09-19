@@ -8,6 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// @Summary Get a list of tags for the authenticated user
+// @Description Get a list of tags for the authenticated user. The user is identified by the token in the cookie.
+// @Tags tags
+// @Produce  json
+// @Success 200 {array} Tag
+// @Failure 404
+// @Router /tags [get]
 func (app *App) getTags(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 	var tags []Tag
@@ -22,6 +29,16 @@ func (app *App) getTags(c *gin.Context) {
 	return
 }
 
+// @Summary Create new tags
+// @Description Create new tags for the authenticated user. The user is identified by the token in the cookie.
+// @Tags tags
+// @Accept  multipart/form-data
+// @Produce  json
+// @Param tagnames formData string true "Comma-separated list of tag names to create"
+// @Success 201 {array} Tag
+// @Failure 400
+// @Failure 404
+// @Router /tags [post]
 func (app *App) createTags(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 	// , is now an unsupported char in tags
@@ -62,6 +79,18 @@ func (app *App) createTags(c *gin.Context) {
 	c.JSON(http.StatusCreated, newTags)
 }
 
+// @Summary Edit existing tags
+// @Description Edit existing tags for the authenticated user. The user is identified by the token in the cookie.
+// @Tags tags
+// @Accept  multipart/form-data
+// @Produce  json
+// @Param tagnames formData string true "Comma-separated list of tag names to edit"
+// @Param newnames formData string true "Comma-separated list of new tag names"
+// @Success 200 {string} string "Tags modified!"
+// @Failure 412
+// @Failure 404
+// @Failure 500
+// @Router /tags [put]
 func (app *App) editTags(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 	tagNames := strings.Split(c.PostForm("tagnames"), `,`)
@@ -98,6 +127,16 @@ func (app *App) editTags(c *gin.Context) {
 	c.JSON(http.StatusOK, "Tags modified!")
 }
 
+// @Summary Delete existing tags
+// @Description Delete existing tags for the authenticated user. The user is identified by the token in the cookie.
+// @Tags tags
+// @Accept  multipart/form-data
+// @Produce  json
+// @Param tagnames formData string true "Comma-separated list of tag names to delete"
+// @Success 200 {string} string "Tags deleted!"
+// @Failure 404
+// @Failure 400
+// @Router /tags [delete]
 func (app *App) deleteTags(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 	tagNames := strings.Split(c.PostForm("tagnames"), `,`)

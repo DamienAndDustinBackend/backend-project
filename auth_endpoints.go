@@ -7,6 +7,17 @@ import (
 	"gorm.io/gorm"
 )
 
+// @Summary Register a new user
+// @Description Register a new user with the given email and password
+// @Tags auth
+// @Accept  json
+// @Produce  json
+// @Param   user     body    User   true        "User to register"
+// @Success 201 {object} User
+// @Failure 400
+// @Failure 404
+// @Failure 500
+// @Router /register [post]
 func (app *App) register(c *gin.Context) {
 	var user User
 
@@ -61,6 +72,17 @@ func (app *App) register(c *gin.Context) {
 	}
 }
 
+// @Summary Log in a user
+// @Description Log in a user with the given email and password
+// @Tags auth
+// @Accept  json
+// @Produce  json
+// @Param   user     body    User   true        "User to log in"
+// @Success 200 {object} object
+// @Failure 400
+// @Failure 401
+// @Failure 500
+// @Router /login [post]
 func (app *App) login(c *gin.Context) {
 	var user User
 
@@ -97,6 +119,11 @@ func (app *App) login(c *gin.Context) {
 	}
 }
 
+// @Summary Log out a user
+// @Description Log out a user by clearing the token cookie
+// @Tags auth
+// @Success 200
+// @Router /logout [get]
 func (app *App) logout(c *gin.Context) {
 	c.SetCookie("token", "", -1, "/", "localhost", false, true)
 }
