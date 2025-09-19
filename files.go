@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -39,7 +40,7 @@ func (app *App) getFiles(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 
 	var files []File
-	result := app.db.Scopes(Paginate(c.Request)).Where(&File{UserId: user.ID}).Find(&files)
+	result := app.db.Scopes(Paginate(c.Request)).Preload("Tags", nil).Where(&File{UserId: user.ID}).Find(&files)
 	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
 	}
@@ -79,8 +80,23 @@ func (app *App) createFile(c *gin.Context) {
 	uploadedFile, err := c.FormFile("file")
 	fileName := c.PostForm("name")
 	fileDescription := c.DefaultPostForm("description", "")
-	//tags := c.DefaultPostForm("tags", "[]")
-	//tagStructs := []Tag{}
+
+	// Parse tags
+	tagsString := c.DefaultPostForm("tags", "")
+	var parsedTags []Tag
+	if tagsString != "" {
+		tagIds := strings.Split(tagsString, `,`)
+
+		for _, id := range tagIds {
+			uintId32, err := strconv.ParseUint(id, 10, 32)
+			if err != nil {
+				panic(err)
+			}
+			parsedTags = append(parsedTags, Tag{
+				ID: uint(uintId32),
+			})
+		}
+	}
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -100,7 +116,7 @@ func (app *App) createFile(c *gin.Context) {
 		return
 	}
 
-	file := File{Name: fileName, Description: fileDescription, FilePath: uniqueFileName, Tags: []Tag{}, UserId: user.ID}
+	file := File{Name: fileName, Description: fileDescription, FilePath: uniqueFileName, UserId: user.ID}
 	err = gorm.G[File](app.db).Create(
 		c,
 		&file,
@@ -110,10 +126,21 @@ func (app *App) createFile(c *gin.Context) {
 		return
 	}
 
-	// I'm querying the database here to get the updatedAt, createdAt, timestamps
-	fileFromDatabase, err := gorm.G[File](app.db).Where(&File{ID: file.ID}).First(c)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// Associate tags with the file
+	if len(parsedTags) > 0 {
+		// You need to use the classic GORM API for associations. ???
+		err = app.db.Model(&file).Association("Tags").Append(parsedTags)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	// I'm querying the database here to get the updatedAt and createdAt timestamps
+	var fileFromDatabase File
+	tx := app.db.Model(&File{}).Preload("Tags").First(&fileFromDatabase, file.ID)
+	if tx.Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": tx.Error})
 		return
 	}
 
@@ -131,7 +158,7 @@ func (app *App) getFile(c *gin.Context) {
 	}
 	fileIdAsUint := uint(fileId)
 
-	file, err := gorm.G[File](app.db).Where(&File{UserId: user.ID, ID: fileIdAsUint}).First(c)
+	file, err := gorm.G[File](app.db).Preload("Tags", nil).Where(&File{UserId: user.ID, ID: fileIdAsUint}).First(c)
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -175,7 +202,6 @@ func (app *App) updateFile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
 	fileIdAsUint := uint(fileId)
 
 	var file File
@@ -188,6 +214,23 @@ func (app *App) updateFile(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	fetchedFile, err := gorm.G[File](app.db).Where(&File{UserId: user.ID, ID: fileIdAsUint}).First(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Associate tags with the file
+	if len(file.Tags) > 0 {
+		// You need to use the classic GORM API for associations. ??? maybe not
+		fmt.Println(file.Tags)
+		err = app.db.Model(&fetchedFile).Association("Tags").Replace(file.Tags)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true})
