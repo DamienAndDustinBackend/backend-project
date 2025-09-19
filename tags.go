@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -12,11 +13,11 @@ func (app *App) getTags(c *gin.Context) {
 	result := app.db.Find(&tags)
 
 	if result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": result.Error})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Could not find tag(s)"})
 		return
 	}
 
-	c.JSON(http.StatusOK, tags)
+	c.JSON(http.StatusFound, tags)
 	return
 }
 
@@ -34,7 +35,10 @@ func (app *App) createTags(c *gin.Context) {
 	result := app.db.Create(newTags)
 
 	if result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Could not bulk create tags!",
+		})
+
 		return
 	}
 
@@ -47,7 +51,7 @@ func (app *App) createTags(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, newTags)
+	c.JSON(http.StatusCreated, newTags)
 }
 
 func (app *App) editTags(c *gin.Context) {
@@ -63,7 +67,10 @@ func (app *App) editTags(c *gin.Context) {
 		result := app.db.First(&tag, "name = ?", name)
 
 		if result.Error != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": result.Error})
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": fmt.Sprintf("Could not find tag '%s'!", name),
+			})
+
 			return
 		}
 
@@ -71,7 +78,10 @@ func (app *App) editTags(c *gin.Context) {
 		result = app.db.Save(&tag)
 
 		if result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error})
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": fmt.Sprintf("Could not save tag '%s' to the DB!", name),
+			})
+
 			return
 		}
 	}
@@ -85,7 +95,10 @@ func (app *App) deleteTags(c *gin.Context) {
 	for _, name := range tagNames {
 		result := app.db.Delete(&Tag{}, "Name LIKE ?", name)
 		if result.Error != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": result.Error})
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": fmt.Sprintf("Could not delete tag '%s'!", name),
+			})
+
 			return
 		}
 	}
