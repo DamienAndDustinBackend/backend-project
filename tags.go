@@ -38,7 +38,16 @@ func (app *App) createTags(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, "Tags created!")
+	for _, tag := range newTags {
+		result := app.db.First(&tag, "name = ?", tag.Name)
+
+		if result.Error != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": result.Error})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, newTags)
 }
 
 func (app *App) editTags(c *gin.Context) {
