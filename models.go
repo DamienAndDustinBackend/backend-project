@@ -26,6 +26,7 @@ type Tag struct {
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 	Name      string
+	UserId    uint
 
 	Files []File `gorm:"many2many:file_tags"`
 }
