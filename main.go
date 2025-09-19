@@ -41,14 +41,23 @@ func (app *App) setupRouter() *gin.Engine {
 	router.POST("/login", app.login)
 	router.GET("/logout", app.logout)
 
-	// files
+	// authorized
 	authorized := router.Group("/")
-	authorized.Use(app.AuthMiddleware)
-	authorized.GET("/files/:id", app.getFile)
-	authorized.GET("/files", app.getFiles)
-	authorized.POST("/files", app.createFile)
-	authorized.PATCH("/files/:id", app.updateFile)
-	authorized.DELETE("/files/:id", app.deleteFile)
+	authorized.Use(authMiddleware)
+	{
+		// files
+		authorized.GET("/files/:id", app.getFile)
+		authorized.GET("/files", app.getFiles)
+		authorized.POST("/files", app.createFile)
+		authorized.PATCH("/files/:id", app.updateFile)
+		authorized.DELETE("/files/:id", app.deleteFile)
+
+		// tags
+		authorized.GET("/tags", app.getTags)
+		authorized.POST("/tags", app.createTags)
+		authorized.PUT("/tags", app.editTags)
+		authorized.DELETE("/tags", app.deleteTags)
+	}
 	return router
 }
 
