@@ -27,9 +27,14 @@ func (app *App) createTags(c *gin.Context) {
 	var newTags []Tag
 
 	for _, name := range tagNames {
-		newTags = append(newTags, Tag{
-			Name: name,
-		})
+		var tag Tag
+		app.db.Find(&tag, "name = ?", name)
+
+		if tag.Name != name {
+			newTags = append(newTags, Tag{
+				Name: name,
+			})
+		}
 	}
 
 	result := app.db.Create(newTags)
