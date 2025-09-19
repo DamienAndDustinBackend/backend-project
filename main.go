@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/backend-project/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -44,7 +43,7 @@ func (app *App) setupRouter() *gin.Engine {
 
 	// files
 	authorized := router.Group("/")
-	authorized.Use(auth.AuthMiddleware)
+	authorized.Use(app.AuthMiddleware)
 	authorized.GET("/files/:id", app.getFile)
 	authorized.GET("/files", app.getFiles)
 	authorized.POST("/files", app.createFile)

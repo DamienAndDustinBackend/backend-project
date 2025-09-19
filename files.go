@@ -36,8 +36,10 @@ func Paginate(r *http.Request) func(db *gorm.DB) *gorm.DB {
 }
 
 func (app *App) getFiles(c *gin.Context) {
+	user := c.MustGet(ContextUserKey).(*User)
+
 	var files []File
-	result := app.db.Scopes(Paginate(c.Request)).Find(&files)
+	result := app.db.Scopes(Paginate(c.Request)).Where(&File{UserId: user.ID}).Find(&files)
 	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
 	}
@@ -72,6 +74,8 @@ func (app *App) generateUniqueFileName(ctx *gin.Context) string {
 
 func (app *App) createFile(c *gin.Context) {
 
+	user := c.MustGet(ContextUserKey).(*User)
+
 	uploadedFile, err := c.FormFile("file")
 	fileName := c.PostForm("name")
 	fileDescription := c.DefaultPostForm("description", "")
@@ -96,7 +100,7 @@ func (app *App) createFile(c *gin.Context) {
 		return
 	}
 
-	file := File{Name: fileName, Description: fileDescription, FilePath: uniqueFileName, Tags: []Tag{}}
+	file := File{Name: fileName, Description: fileDescription, FilePath: uniqueFileName, Tags: []Tag{}, UserId: user.ID}
 	err = gorm.G[File](app.db).Create(
 		c,
 		&file,
@@ -117,8 +121,17 @@ func (app *App) createFile(c *gin.Context) {
 }
 
 func (app *App) getFile(c *gin.Context) {
-	fileId := c.Param("id")
-	file, err := gorm.G[File](app.db).Where("id = ?", fileId).First(c)
+	user := c.MustGet(ContextUserKey).(*User)
+
+	// TODO: There must be a better way
+	fileId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	fileIdAsUint := uint(fileId)
+
+	file, err := gorm.G[File](app.db).Where(&File{UserId: user.ID, ID: fileIdAsUint}).First(c)
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -134,8 +147,17 @@ func (app *App) getFile(c *gin.Context) {
 }
 
 func (app *App) deleteFile(c *gin.Context) {
-	fileId := c.Param("id")
-	_, err := gorm.G[File](app.db).Where("id = ?", fileId).Delete(c)
+	user := c.MustGet(ContextUserKey).(*User)
+
+	fileId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	fileIdAsUint := uint(fileId)
+
+	_, err = gorm.G[File](app.db).Where(&File{UserId: user.ID, ID: fileIdAsUint}).Delete(c)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -146,7 +168,15 @@ func (app *App) deleteFile(c *gin.Context) {
 }
 
 func (app *App) updateFile(c *gin.Context) {
-	fileId := c.Param("id")
+	user := c.MustGet(ContextUserKey).(*User)
+
+	fileId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	fileIdAsUint := uint(fileId)
 
 	var file File
 	if err := c.BindJSON(&file); err != nil {
@@ -154,7 +184,7 @@ func (app *App) updateFile(c *gin.Context) {
 		return
 	}
 
-	_, err := gorm.G[File](app.db).Where("id = ?", fileId).Updates(c, file)
+	_, err = gorm.G[File](app.db).Where(&File{UserId: user.ID, ID: fileIdAsUint}).Updates(c, file)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

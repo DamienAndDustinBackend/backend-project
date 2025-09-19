@@ -16,7 +16,8 @@ type File struct {
 	Description string
 	FilePath    string `gorm:"index"`
 	Tags        []Tag  `gorm:"many2many:file_tags"`
-	UserId      uint8
+
+	UserId uint
 }
 
 type Tag struct {

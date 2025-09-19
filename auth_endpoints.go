@@ -44,7 +44,7 @@ func (app *App) register(c *gin.Context) {
 			return
 		}
 		// generate JWT so we don't have to login again for 1 hour
-		tokenString, err := auth.GenerateJWT(user.Email)
+		tokenString, err := GenerateJWT(user.Email)
 
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Error creating JWT")
@@ -84,7 +84,7 @@ func (app *App) login(c *gin.Context) {
 				return
 			} else {
 				// generate JWT so we don't have to login again for 1 hour
-				tokenString, err := auth.GenerateJWT(user.Email)
+				tokenString, err := GenerateJWT(user.Email)
 
 				if err != nil {
 					c.String(http.StatusInternalServerError, "Error creating JWT")
