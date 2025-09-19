@@ -9,8 +9,9 @@ import (
 )
 
 func (app *App) getTags(c *gin.Context) {
+	user := c.MustGet(ContextUserKey).(*User)
 	var tags []Tag
-	result := app.db.Find(&tags)
+	result := app.db.Where(&Tag{UserId: user.ID}).Find(&tags)
 
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Could not find tag(s)"})
@@ -22,6 +23,7 @@ func (app *App) getTags(c *gin.Context) {
 }
 
 func (app *App) createTags(c *gin.Context) {
+	user := c.MustGet(ContextUserKey).(*User)
 	// , is now an unsupported char in tags
 	tagNames := strings.Split(c.PostForm("tagnames"), `,`)
 	var newTags []Tag
@@ -32,7 +34,8 @@ func (app *App) createTags(c *gin.Context) {
 
 		if tag.Name != name {
 			newTags = append(newTags, Tag{
-				Name: name,
+				Name:   name,
+				UserId: user.ID,
 			})
 		}
 	}
@@ -60,6 +63,7 @@ func (app *App) createTags(c *gin.Context) {
 }
 
 func (app *App) editTags(c *gin.Context) {
+	user := c.MustGet(ContextUserKey).(*User)
 	tagNames := strings.Split(c.PostForm("tagnames"), `,`)
 	newNames := strings.Split(c.PostForm("newnames"), `,`)
 
@@ -69,7 +73,7 @@ func (app *App) editTags(c *gin.Context) {
 
 	for i, name := range tagNames {
 		var tag Tag
-		result := app.db.First(&tag, "name = ?", name)
+		result := app.db.Where(&Tag{UserId: user.ID, Name: name}).First(&tag)
 
 		if result.Error != nil {
 			c.JSON(http.StatusNotFound, gin.H{
@@ -95,10 +99,18 @@ func (app *App) editTags(c *gin.Context) {
 }
 
 func (app *App) deleteTags(c *gin.Context) {
+	user := c.MustGet(ContextUserKey).(*User)
 	tagNames := strings.Split(c.PostForm("tagnames"), `,`)
 
 	for _, name := range tagNames {
-		result := app.db.Delete(&Tag{}, "Name LIKE ?", name)
+		result := app.db.Where(&Tag{UserId: user.ID, Name: name}).Delete(&Tag{})
+		if result.RowsAffected < 1 {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": fmt.Sprintf("Could not delete tag '%s' as it does not exist!", name),
+			})
+
+			return
+		}
 		if result.Error != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": fmt.Sprintf("Could not delete tag '%s'!", name),
