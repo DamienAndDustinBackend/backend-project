@@ -51,7 +51,7 @@ func TestPingRoute(t *testing.T) {
 	assert.Equal(t, "pong", w.Body.String())
 }
 
-func TestUploadFileRoute(t *testing.T) {
+func TestUploadFile(t *testing.T) {
 	defer cleanUp()
 
 	err := os.Setenv("ENVIRONMENT", "TEST")
@@ -62,6 +62,14 @@ func TestUploadFileRoute(t *testing.T) {
 	db := setupDatabase()
 	app := App{db: db}
 	router := app.setupRouter()
+
+	// Register a user and get the cookie
+	w := httptest.NewRecorder()
+	user := User{Email: "test@test.com", Password: "secret"}
+	userJson, _ := json.Marshal(user)
+	req, _ := http.NewRequest("POST", "/register", strings.NewReader(string(userJson)))
+	router.ServeHTTP(w, req)
+	cookie := w.Result().Cookies()[0]
 
 	// Create a dummy file for testing
 	dummyFileContent := []byte("This is a test file content.")
@@ -126,9 +134,10 @@ func TestUploadFileRoute(t *testing.T) {
 	err = writer.Close()
 	assert.NoError(t, err)
 
-	w := httptest.NewRecorder()
+	w = httptest.NewRecorder()
 
-	req, _ := http.NewRequest("POST", "/files", fileBody)
+	req, _ = http.NewRequest("POST", "/files", fileBody)
+	req.AddCookie(cookie)
 	req.Header.Set("Content-Type", writer.FormDataContentType()) // Set the correct Content-Type header
 	router.ServeHTTP(w, req)
 
@@ -156,8 +165,17 @@ func TestGetFiles(t *testing.T) {
 	app := App{db: db}
 	router := app.setupRouter()
 
+	// Register a user and get the cookie
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/files", nil)
+	user := User{Email: "test@test.com", Password: "secret"}
+	userJson, _ := json.Marshal(user)
+	req, _ := http.NewRequest("POST", "/register", strings.NewReader(string(userJson)))
+	router.ServeHTTP(w, req)
+	cookie := w.Result().Cookies()[0]
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/files", nil)
+	req.AddCookie(cookie)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
@@ -230,6 +248,7 @@ func TestGetFiles(t *testing.T) {
 	w = httptest.NewRecorder()
 
 	req, _ = http.NewRequest("POST", "/files", fileBody)
+	req.AddCookie(cookie)
 	req.Header.Set("Content-Type", writer.FormDataContentType()) // Set the correct Content-Type header
 	router.ServeHTTP(w, req)
 
@@ -247,6 +266,7 @@ func TestGetFiles(t *testing.T) {
 
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/files", nil)
+	req.AddCookie(cookie)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
@@ -265,8 +285,17 @@ func TestGetFile(t *testing.T) {
 	app := App{db: db}
 	router := app.setupRouter()
 
+	// Register a user and get the cookie
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/files", nil)
+	user := User{Email: "test@test.com", Password: "secret"}
+	userJson, _ := json.Marshal(user)
+	req, _ := http.NewRequest("POST", "/register", strings.NewReader(string(userJson)))
+	router.ServeHTTP(w, req)
+	cookie := w.Result().Cookies()[0]
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/files", nil)
+	req.AddCookie(cookie)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
@@ -339,6 +368,7 @@ func TestGetFile(t *testing.T) {
 	w = httptest.NewRecorder()
 
 	req, _ = http.NewRequest("POST", "/files", fileBody)
+	req.AddCookie(cookie)
 	req.Header.Set("Content-Type", writer.FormDataContentType()) // Set the correct Content-Type header
 	router.ServeHTTP(w, req)
 
@@ -356,6 +386,7 @@ func TestGetFile(t *testing.T) {
 
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", fmt.Sprintf("/files/%s", strconv.Itoa(int(expected.ID))), nil)
+	req.AddCookie(cookie)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
@@ -373,8 +404,18 @@ func TestDeleteFile(t *testing.T) {
 	app := App{db: db}
 	router := app.setupRouter()
 
+	// Register a user and get the cookie
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/files", nil)
+	user := User{Email: "test@test.com", Password: "secret"}
+	userJson, _ := json.Marshal(user)
+	req, _ := http.NewRequest("POST", "/register", strings.NewReader(string(userJson)))
+	router.ServeHTTP(w, req)
+	cookie := w.Result().Cookies()[0]
+
+	// Check that there are no files
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/files", nil)
+	req.AddCookie(cookie)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
@@ -447,6 +488,7 @@ func TestDeleteFile(t *testing.T) {
 	w = httptest.NewRecorder()
 
 	req, _ = http.NewRequest("POST", "/files", fileBody)
+	req.AddCookie(cookie)
 	req.Header.Set("Content-Type", writer.FormDataContentType()) // Set the correct Content-Type header
 	router.ServeHTTP(w, req)
 
@@ -464,6 +506,7 @@ func TestDeleteFile(t *testing.T) {
 
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("DELETE", fmt.Sprintf("/files/%s", strconv.Itoa(int(expected.ID))), nil)
+	req.AddCookie(cookie)
 	router.ServeHTTP(w, req)
 
 	expectedJson, err = json.Marshal(gin.H{"success": true})
@@ -486,8 +529,18 @@ func TestUpdateFile(t *testing.T) {
 	app := App{db: db}
 	router := app.setupRouter()
 
+	// Register a user and get the cookie
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/files", nil)
+	user := User{Email: "test@test.com", Password: "secret"}
+	userJson, _ := json.Marshal(user)
+	req, _ := http.NewRequest("POST", "/register", strings.NewReader(string(userJson)))
+	router.ServeHTTP(w, req)
+	cookie := w.Result().Cookies()[0]
+
+	// Check that there are no files
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/files", nil)
+	req.AddCookie(cookie)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
@@ -560,6 +613,7 @@ func TestUpdateFile(t *testing.T) {
 	w = httptest.NewRecorder()
 
 	req, _ = http.NewRequest("POST", "/files", fileBody)
+	req.AddCookie(cookie)
 	req.Header.Set("Content-Type", writer.FormDataContentType()) // Set the correct Content-Type header
 	router.ServeHTTP(w, req)
 
@@ -580,6 +634,7 @@ func TestUpdateFile(t *testing.T) {
 	updatedFile := File{Name: "new name", Description: "new description"}
 	updatedFileJson, _ := json.Marshal(updatedFile)
 	req, _ = http.NewRequest("PATCH", fmt.Sprintf("/files/%s", strconv.Itoa(int(expected.ID))), strings.NewReader(string(updatedFileJson)))
+	req.AddCookie(cookie)
 	router.ServeHTTP(w, req)
 
 	expectedJson, err = json.Marshal(gin.H{"success": true})

@@ -8,36 +8,35 @@ import (
 
 type File struct {
 	gorm.Model
-	ID          uint           `gorm:"primarykey"`
-	CreatedAt   time.Time      ``
-	UpdatedAt   time.Time      ``
+	ID          uint `gorm:"primarykey"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 	DeletedAt   gorm.DeletedAt `gorm:"index"`
-	Name        string         ``
-	Description string         ``
-	FilePath    string         `gorm:"index"`
-	Tags        []Tag          `gorm:"many2many:file_tags"`
-	UserId      uint8          ``
+	Name        string
+	Description string
+	FilePath    string `gorm:"index"`
+	Tags        []Tag  `gorm:"many2many:file_tags"`
+
+	UserId uint
 }
 
 type Tag struct {
-	gorm.Model
-	ID        uint           `gorm:"primarykey"`
-	CreatedAt time.Time      ``
-	UpdatedAt time.Time      ``
+	ID        uint `gorm:"primarykey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
-	Name      string         ``
+	Name      string
 
 	Files []File `gorm:"many2many:file_tags"`
 }
 
 type User struct {
-	gorm.Model
-	ID        uint           `gorm:"primarykey"`
-	CreatedAt time.Time      ``
-	UpdatedAt time.Time      ``
+	ID        uint `gorm:"primarykey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 	Email     string         `gorm:"uniqueIndex" json:"email"`
-	Password  string         ``
+	Password  string
 
 	Files []File
 }
