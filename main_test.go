@@ -762,6 +762,145 @@ func TestUpdateFile(t *testing.T) {
 	assert.EqualValues(t, fetchedUpdatedFile.Description, updatedFile.Description)
 }
 
+func TestUpdateFileWithTags(t *testing.T) {
+	defer cleanUp()
+
+	err := os.Setenv("ENVIRONMENT", "TEST")
+	if err != nil {
+		panic(err)
+	}
+	db := setupDatabase()
+	app := App{db: db}
+	router := app.setupRouter()
+
+	// Register a user and get the cookie
+	w := httptest.NewRecorder()
+	user := User{Email: "test@test.com", Password: "secret"}
+	userJson, _ := json.Marshal(user)
+	req, _ := http.NewRequest("POST", "/register", strings.NewReader(string(userJson)))
+	router.ServeHTTP(w, req)
+	cookie := w.Result().Cookies()[0]
+
+	// Check that there are no files
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/files", nil)
+	req.AddCookie(cookie)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 200, w.Code)
+	assert.Equal(t, "[]", w.Body.String())
+
+	// upload a file
+	// Create a dummy file for testing
+	dummyFileContent := []byte("This is a test file content.")
+	dummyFileName := "testfile.txt"
+	err = os.WriteFile(dummyFileName, dummyFileContent, 0644)
+	assert.NoError(t, err)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+			panic(err)
+		}
+	}(dummyFileName) // Clean up the dummy file
+
+	// Create a new multipart writer
+	fileBody := new(bytes.Buffer)
+	writer := multipart.NewWriter(fileBody)
+
+	// Create a form file field
+	file, err := os.Open(dummyFileName)
+	assert.NoError(t, err)
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(file)
+
+	err = writer.WriteField("name", "test-filename")
+	if err != nil {
+		return
+	}
+
+	err = writer.WriteField("description", "this is a test file")
+	if err != nil {
+		return
+	}
+
+	tag := Tag{Name: "test-tag"}
+	err = gorm.G[Tag](db).Create(t.Context(), &tag)
+	if err != nil {
+		panic(err)
+	}
+
+	tagsInField := fmt.Sprintf("%s", strconv.Itoa(int(tag.ID)))
+	err = writer.WriteField("tags", tagsInField)
+	if err != nil {
+		return
+	}
+
+	part, err := writer.CreateFormFile("file", dummyFileName) // "myFile" must match the name in the handler
+
+	assert.NoError(t, err)
+	_, err = io.Copy(part, file)
+	assert.NoError(t, err)
+
+	// Close the multipart writer
+	err = writer.Close()
+	assert.NoError(t, err)
+
+	w = httptest.NewRecorder()
+
+	req, _ = http.NewRequest("POST", "/files", fileBody)
+	req.AddCookie(cookie)
+	req.Header.Set("Content-Type", writer.FormDataContentType()) // Set the correct Content-Type header
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 200, w.Code)
+
+	expected, err := gorm.G[File](app.db).Preload("Tags", nil).Order("created_at desc").First(context.TODO())
+	if err != nil {
+		panic(err)
+	}
+
+	assert.Equal(t, expected.Tags[0].ID, tag.ID)
+
+	expectedJson, err := json.Marshal(expected)
+	if err != nil {
+		panic(err)
+	}
+	assert.Equal(t, string(expectedJson), w.Body.String())
+
+	w = httptest.NewRecorder()
+
+	tag2 := Tag{Name: "another-tag"}
+	err = gorm.G[Tag](db).Create(t.Context(), &tag2)
+	if err != nil {
+		panic(err)
+	}
+
+	updatedFile := File{Name: "new name", Description: "new description", Tags: []Tag{{ID: tag.ID}, {ID: tag2.ID}}}
+	updatedFileJson, _ := json.Marshal(updatedFile)
+	req, _ = http.NewRequest("PATCH", fmt.Sprintf("/files/%s", strconv.Itoa(int(expected.ID))), strings.NewReader(string(updatedFileJson)))
+	req.AddCookie(cookie)
+	router.ServeHTTP(w, req)
+
+	expectedJson, err = json.Marshal(gin.H{"success": true})
+
+	assert.Equal(t, 200, w.Code)
+	assert.Equal(t, string(expectedJson), w.Body.String())
+
+	fetchedUpdatedFile, err := gorm.G[File](app.db).Where("id = ?", expected.ID).Preload("Tags", nil).First(context.TODO())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%v", fetchedUpdatedFile)
+	assert.EqualValues(t, fetchedUpdatedFile.Name, updatedFile.Name)
+	assert.EqualValues(t, fetchedUpdatedFile.Description, updatedFile.Description)
+	assert.Equal(t, fetchedUpdatedFile.Tags[0].ID, tag.ID)
+	assert.Equal(t, fetchedUpdatedFile.Tags[1].ID, tag2.ID)
+}
+
 func TestRegister(t *testing.T) {
 	defer cleanUp()
 

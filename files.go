@@ -202,7 +202,6 @@ func (app *App) updateFile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
 	fileIdAsUint := uint(fileId)
 
 	var file File
@@ -215,6 +214,23 @@ func (app *App) updateFile(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	fetchedFile, err := gorm.G[File](app.db).Where(&File{UserId: user.ID, ID: fileIdAsUint}).First(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Associate tags with the file
+	if len(file.Tags) > 0 {
+		// You need to use the classic GORM API for associations. ??? maybe not
+		fmt.Println(file.Tags)
+		err = app.db.Model(&fetchedFile).Association("Tags").Replace(file.Tags)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true})
