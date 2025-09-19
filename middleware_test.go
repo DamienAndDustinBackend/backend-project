@@ -1,4 +1,4 @@
-package auth
+package main
 
 import (
 	"net/http"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
-
 
 func TestAuthMiddleware_ValidToken(t *testing.T) {
 	// Setup

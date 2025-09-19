@@ -1,4 +1,4 @@
-package auth
+package main
 
 import (
 	"os"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 )
-
 
 func TestGetRole(t *testing.T) {
 	// Test admin role
