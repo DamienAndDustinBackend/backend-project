@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func TestAuthMiddleware_ValidToken(t *testing.T) {
@@ -13,6 +14,17 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
 	c, r := gin.CreateTestContext(w)
+	db := setupDatabase()
+	app := App{db: db}
+	// Create a user
+	user := User{
+		Email:    "test@example.com",
+		Password: "secret",
+	}
+	err := gorm.G[User](db).Create(t.Context(), &user)
+	if err != nil {
+		panic(err)
+	}
 
 	// Create a valid token
 	token, err := GenerateJWT("test@example.com")
@@ -29,8 +41,6 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 
 	// Create a dummy handler to check if the middleware calls c.Next()
 	nextCalled := false
-	db := setupDatabase()
-	app := App{db: db}
 	r.GET("/", app.AuthMiddleware, func(c *gin.Context) {
 		nextCalled = true
 		c.Status(http.StatusOK)

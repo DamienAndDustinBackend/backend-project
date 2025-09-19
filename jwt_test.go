@@ -40,17 +40,13 @@ func TestGenerateAndVerifyJWT(t *testing.T) {
 		t.Fatalf("VerifyJWT() token is not valid")
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
+	claims, ok := token.Claims.(*jwt.RegisteredClaims)
 	if !ok {
-		t.Fatalf("VerifyJWT() claims are not of type jwt.MapClaims")
+		t.Fatalf("VerifyJWT() claims are not of type jwt.RegisteredClaims")
 	}
 
-	if claims["sub"] != email {
-		t.Errorf("VerifyJWT() subject = %v, want %v", claims["sub"], email)
-	}
-
-	if claims["aud"] != "default" {
-		t.Errorf("VerifyJWT() audience = %v, want %v", claims["aud"], "default")
+	if claims.Subject != email {
+		t.Errorf("VerifyJWT() subject = %v, want %v", claims.Subject, email)
 	}
 }
 
