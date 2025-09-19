@@ -154,6 +154,114 @@ func TestUploadFile(t *testing.T) {
 	assert.Equal(t, string(expectedJson), w.Body.String())
 }
 
+func TestUploadFileWithTag(t *testing.T) {
+	defer cleanUp()
+
+	err := os.Setenv("ENVIRONMENT", "TEST")
+	if err != nil {
+		panic(err)
+	}
+
+	db := setupDatabase()
+	app := App{db: db}
+	router := app.setupRouter()
+
+	// Register a user and get the cookie
+	w := httptest.NewRecorder()
+	user := User{Email: "test@test.com", Password: "secret"}
+	userJson, _ := json.Marshal(user)
+	req, _ := http.NewRequest("POST", "/register", strings.NewReader(string(userJson)))
+	router.ServeHTTP(w, req)
+	cookie := w.Result().Cookies()[0]
+
+	// Create a tag
+	// TODO: change this to use the endpoint once it returns the ids
+	tag := Tag{Name: "test-tag"}
+	err = gorm.G[Tag](db).Create(t.Context(), &tag)
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a dummy file for testing
+	dummyFileContent := []byte("This is a test file content.")
+	dummyFileName := "testfile.txt"
+	err = os.WriteFile(dummyFileName, dummyFileContent, 0644)
+	assert.NoError(t, err)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+			panic(err)
+		}
+	}(dummyFileName) // Clean up the dummy file
+
+	// Create a new multipart writer
+	fileBody := new(bytes.Buffer)
+	writer := multipart.NewWriter(fileBody)
+
+	// Create a form file field
+	file, err := os.Open(dummyFileName)
+	assert.NoError(t, err)
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(file)
+
+	err = writer.WriteField("name", "test-filename")
+	if err != nil {
+		return
+	}
+
+	err = writer.WriteField("description", "this is a test file")
+	if err != nil {
+		return
+	}
+
+	tagsInField := fmt.Sprintf("%s", strconv.Itoa(int(tag.ID)))
+	err = writer.WriteField("tags", tagsInField)
+	if err != nil {
+		return
+	}
+
+	part, err := writer.CreateFormFile("file", dummyFileName)
+
+	assert.NoError(t, err)
+	_, err = io.Copy(part, file)
+	assert.NoError(t, err)
+
+	// Close the multipart writer
+	err = writer.Close()
+	assert.NoError(t, err)
+
+	w = httptest.NewRecorder()
+
+	req, _ = http.NewRequest("POST", "/files", fileBody)
+	req.AddCookie(cookie)
+	req.Header.Set("Content-Type", writer.FormDataContentType()) // Set the correct Content-Type header
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 200, w.Code)
+
+	var fileFromDatabase File
+	tx := app.db.Model(&File{}).Preload("Tags").Order("created_at desc").First(&fileFromDatabase)
+	if tx.Error != nil {
+		panic(tx.Error)
+	}
+
+	assert.Equal(t, fileFromDatabase.Tags[0].ID, tag.ID)
+
+	if err != nil {
+		panic(err)
+	}
+	expectedJson, err := json.Marshal(fileFromDatabase)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(expectedJson))
+	assert.Equal(t, string(expectedJson), w.Body.String())
+}
+
 func TestGetFiles(t *testing.T) {
 	defer cleanUp()
 

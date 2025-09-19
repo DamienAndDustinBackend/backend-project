@@ -13,6 +13,7 @@ import (
 )
 
 func TestAuthMiddleware_ValidToken(t *testing.T) {
+	defer cleanUp()
 	// Setup
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
@@ -63,6 +64,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 }
 
 func TestAuthMiddleware_NoToken(t *testing.T) {
+	defer cleanUp()
 	// Setup
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
@@ -87,6 +89,7 @@ func TestAuthMiddleware_NoToken(t *testing.T) {
 }
 
 func TestAuthMiddleware_InvalidToken(t *testing.T) {
+	defer cleanUp()
 	// Setup
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()

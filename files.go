@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -79,8 +80,26 @@ func (app *App) createFile(c *gin.Context) {
 	uploadedFile, err := c.FormFile("file")
 	fileName := c.PostForm("name")
 	fileDescription := c.DefaultPostForm("description", "")
-	//tags := c.DefaultPostForm("tags", "[]")
-	//tagStructs := []Tag{}
+
+	// Parse tags
+	tags := c.DefaultPostForm("tags", "[]")
+	fmt.Printf("Before marshalling Tags: %v", tags)
+
+	// Parse tags
+	tagIds := strings.Split(c.DefaultPostForm("tags", ""), `,`)
+	var parsedTags []Tag
+
+	for _, id := range tagIds {
+		uintId32, err := strconv.ParseUint(id, 10, 32)
+		if err != nil {
+			panic(err)
+		}
+		parsedTags = append(parsedTags, Tag{
+			ID: uint(uintId32),
+		})
+	}
+
+	fmt.Printf("Tags: %v", tags)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -100,7 +119,7 @@ func (app *App) createFile(c *gin.Context) {
 		return
 	}
 
-	file := File{Name: fileName, Description: fileDescription, FilePath: uniqueFileName, Tags: []Tag{}, UserId: user.ID}
+	file := File{Name: fileName, Description: fileDescription, FilePath: uniqueFileName, UserId: user.ID}
 	err = gorm.G[File](app.db).Create(
 		c,
 		&file,
@@ -110,10 +129,21 @@ func (app *App) createFile(c *gin.Context) {
 		return
 	}
 
-	// I'm querying the database here to get the updatedAt, createdAt, timestamps
-	fileFromDatabase, err := gorm.G[File](app.db).Where(&File{ID: file.ID}).First(c)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// Associate tags with the file
+	if len(parsedTags) > 0 {
+		// You need to use the classic GORM API for associations. ???
+		err = app.db.Model(&file).Association("Tags").Append(parsedTags)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	// I'm querying the database here to get the updatedAt and createdAt timestamps
+	var fileFromDatabase File
+	tx := app.db.Model(&File{}).Preload("Tags").First(&fileFromDatabase, file.ID)
+	if tx.Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": tx.Error})
 		return
 	}
 
