@@ -40,7 +40,7 @@ func (app *App) getFiles(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 
 	var files []File
-	result := app.db.Scopes(Paginate(c.Request)).Where(&File{UserId: user.ID}).Find(&files)
+	result := app.db.Scopes(Paginate(c.Request)).Preload("Tags", nil).Where(&File{UserId: user.ID}).Find(&files)
 	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
 	}
@@ -82,24 +82,21 @@ func (app *App) createFile(c *gin.Context) {
 	fileDescription := c.DefaultPostForm("description", "")
 
 	// Parse tags
-	tags := c.DefaultPostForm("tags", "[]")
-	fmt.Printf("Before marshalling Tags: %v", tags)
-
-	// Parse tags
-	tagIds := strings.Split(c.DefaultPostForm("tags", ""), `,`)
+	tagsString := c.DefaultPostForm("tags", "")
 	var parsedTags []Tag
+	if tagsString != "" {
+		tagIds := strings.Split(tagsString, `,`)
 
-	for _, id := range tagIds {
-		uintId32, err := strconv.ParseUint(id, 10, 32)
-		if err != nil {
-			panic(err)
+		for _, id := range tagIds {
+			uintId32, err := strconv.ParseUint(id, 10, 32)
+			if err != nil {
+				panic(err)
+			}
+			parsedTags = append(parsedTags, Tag{
+				ID: uint(uintId32),
+			})
 		}
-		parsedTags = append(parsedTags, Tag{
-			ID: uint(uintId32),
-		})
 	}
-
-	fmt.Printf("Tags: %v", tags)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -161,7 +158,7 @@ func (app *App) getFile(c *gin.Context) {
 	}
 	fileIdAsUint := uint(fileId)
 
-	file, err := gorm.G[File](app.db).Where(&File{UserId: user.ID, ID: fileIdAsUint}).First(c)
+	file, err := gorm.G[File](app.db).Preload("Tags", nil).Where(&File{UserId: user.ID, ID: fileIdAsUint}).First(c)
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

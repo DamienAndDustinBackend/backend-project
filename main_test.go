@@ -143,11 +143,15 @@ func TestUploadFile(t *testing.T) {
 
 	assert.Equal(t, 200, w.Code)
 
-	expected, err := gorm.G[File](app.db).Order("created_at desc").First(context.TODO())
+	var fileFromDatabase File
+	tx := app.db.Model(&File{}).Preload("Tags").Order("created_at desc").First(&fileFromDatabase)
+	if tx.Error != nil {
+		panic(tx.Error)
+	}
 	if err != nil {
 		panic(err)
 	}
-	expectedJson, err := json.Marshal(expected)
+	expectedJson, err := json.Marshal(fileFromDatabase)
 	if err != nil {
 		panic(err)
 	}
@@ -362,7 +366,7 @@ func TestGetFiles(t *testing.T) {
 
 	assert.Equal(t, 200, w.Code)
 
-	expected, err := gorm.G[File](app.db).Order("created_at desc").First(context.TODO())
+	expected, err := gorm.G[File](app.db).Preload("Tags", nil).Order("created_at desc").First(context.TODO())
 	if err != nil {
 		panic(err)
 	}
@@ -482,7 +486,7 @@ func TestGetFile(t *testing.T) {
 
 	assert.Equal(t, 200, w.Code)
 
-	expected, err := gorm.G[File](app.db).Order("created_at desc").First(context.TODO())
+	expected, err := gorm.G[File](app.db).Preload("Tags", nil).Order("created_at desc").First(context.TODO())
 	if err != nil {
 		panic(err)
 	}
@@ -602,7 +606,7 @@ func TestDeleteFile(t *testing.T) {
 
 	assert.Equal(t, 200, w.Code)
 
-	expected, err := gorm.G[File](app.db).Order("created_at desc").First(context.TODO())
+	expected, err := gorm.G[File](app.db).Preload("Tags", nil).Order("created_at desc").First(context.TODO())
 	if err != nil {
 		panic(err)
 	}
@@ -727,7 +731,7 @@ func TestUpdateFile(t *testing.T) {
 
 	assert.Equal(t, 200, w.Code)
 
-	expected, err := gorm.G[File](app.db).Order("created_at desc").First(context.TODO())
+	expected, err := gorm.G[File](app.db).Preload("Tags", nil).Order("created_at desc").First(context.TODO())
 	if err != nil {
 		panic(err)
 	}
@@ -750,7 +754,7 @@ func TestUpdateFile(t *testing.T) {
 	assert.Equal(t, 200, w.Code)
 	assert.Equal(t, string(expectedJson), w.Body.String())
 
-	fetchedUpdatedFile, err := gorm.G[File](app.db).Where("id = ?", expected.ID).First(context.TODO())
+	fetchedUpdatedFile, err := gorm.G[File](app.db).Where("id = ?", expected.ID).Preload("Tags", nil).First(context.TODO())
 	if err != nil {
 		panic(err)
 	}

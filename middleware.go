@@ -79,7 +79,7 @@ func (app *App) AuthMiddleware(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("JWT verified. Claims: %+v\\n", token.Claims)
+	fmt.Printf("JWT verified. Claims: %+v\n", token.Claims)
 
 	user, err := gorm.G[User](app.db).Where("email = ?", token.Claims.(*jwt.RegisteredClaims).Subject).First(c)
 	if err != nil {
