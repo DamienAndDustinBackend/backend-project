@@ -29,7 +29,9 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 
 	// Create a dummy handler to check if the middleware calls c.Next()
 	nextCalled := false
-	r.GET("/", AuthMiddleware, func(c *gin.Context) {
+	db := setupDatabase()
+	app := App{db: db}
+	r.GET("/", app.AuthMiddleware, func(c *gin.Context) {
 		nextCalled = true
 		c.Status(http.StatusOK)
 	})
@@ -55,7 +57,9 @@ func TestAuthMiddleware_NoToken(t *testing.T) {
 	c.Request, _ = http.NewRequest("GET", "/", nil)
 
 	// Create a dummy handler
-	r.GET("/", AuthMiddleware, func(c *gin.Context) {
+	db := setupDatabase()
+	app := App{db: db}
+	r.GET("/", app.AuthMiddleware, func(c *gin.Context) {
 		// This should not be called
 		t.Error("Next handler was called, but should have been aborted")
 	})
@@ -83,7 +87,9 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 	})
 
 	// Create a dummy handler
-	r.GET("/", AuthMiddleware, func(c *gin.Context) {
+	db := setupDatabase()
+	app := App{db: db}
+	r.GET("/", app.AuthMiddleware, func(c *gin.Context) {
 		// This should not be called
 		t.Error("Next handler was called, but should have been aborted")
 	})
