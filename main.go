@@ -43,7 +43,7 @@ func (app *App) setupRouter() *gin.Engine {
 
 	// authorized
 	authorized := router.Group("/")
-	authorized.Use(authMiddleware)
+	authorized.Use(app.AuthMiddleware)
 	{
 		// files
 		authorized.GET("/files/:id", app.getFile)
