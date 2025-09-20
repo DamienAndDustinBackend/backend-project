@@ -1,0 +1,386 @@
+basePath: /
+definitions:
+  gorm.DeletedAt:
+    properties:
+      time:
+        type: string
+      valid:
+        description: Valid is true if Time is not NULL
+        type: boolean
+    type: object
+  main.File:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      description:
+        type: string
+      filePath:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      tags:
+        items:
+          $ref: '#/definitions/main.Tag'
+        type: array
+      updatedAt:
+        type: string
+      userId:
+        type: integer
+    type: object
+  main.Tag:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      files:
+        items:
+          $ref: '#/definitions/main.File'
+        type: array
+      id:
+        type: integer
+      name:
+        type: string
+      updatedAt:
+        type: string
+      userId:
+        type: integer
+    type: object
+  main.User:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      email:
+        type: string
+      files:
+        items:
+          $ref: '#/definitions/main.File'
+        type: array
+      id:
+        type: integer
+      password:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a file-sharing API.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: File-sharing API
+  version: "1.0"
+paths:
+  /files:
+    get:
+      description: Get a list of files for the authenticated user. The user is identified
+        by the token in the cookie.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.File'
+            type: array
+        "400":
+          description: Bad Request
+      summary: Get a list of files for the authenticated user
+      tags:
+      - files
+    post:
+      consumes:
+      - multipart/form-data
+      description: Create a new file for the authenticated user. The user is identified
+        by the token in the cookie.
+      parameters:
+      - description: File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Name of the file
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: Description of the file
+        in: formData
+        name: description
+        type: string
+      - description: Comma-separated list of tag IDs
+        in: formData
+        name: tags
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.File'
+        "400":
+          description: Bad Request
+      summary: Create a new file
+      tags:
+      - files
+  /files/{id}:
+    delete:
+      description: Delete a file by ID for the authenticated user. The user is identified
+        by the token in the cookie.
+      parameters:
+      - description: File ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "400":
+          description: Bad Request
+      summary: Delete a file by ID
+      tags:
+      - files
+    get:
+      description: Get a file by ID for the authenticated user. The user is identified
+        by the token in the cookie.
+      parameters:
+      - description: File ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.File'
+        "400":
+          description: Bad Request
+      summary: Get a file by ID
+      tags:
+      - files
+    patch:
+      consumes:
+      - application/json
+      description: Update a file by ID for the authenticated user. The user is identified
+        by the token in the cookie.
+      parameters:
+      - description: File ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: File object that needs to be updated
+        in: body
+        name: file
+        required: true
+        schema:
+          $ref: '#/definitions/main.File'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "400":
+          description: Bad Request
+      summary: Update a file by ID
+      tags:
+      - files
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Log in a user with the given email and password
+      parameters:
+      - description: User to log in
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/main.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      summary: Log in a user
+      tags:
+      - auth
+  /logout:
+    get:
+      description: Log out a user by clearing the token cookie
+      responses:
+        "200":
+          description: OK
+      summary: Log out a user
+      tags:
+      - auth
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with the given email and password
+      parameters:
+      - description: User to register
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/main.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.User'
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Register a new user
+      tags:
+      - auth
+  /tags:
+    delete:
+      consumes:
+      - multipart/form-data
+      description: Delete existing tags for the authenticated user. The user is identified
+        by the token in the cookie.
+      parameters:
+      - description: Comma-separated list of tag names to delete
+        in: formData
+        name: tagnames
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Tags deleted!
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+      summary: Delete existing tags
+      tags:
+      - tags
+    get:
+      description: Get a list of tags for the authenticated user. The user is identified
+        by the token in the cookie.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Tag'
+            type: array
+        "404":
+          description: Not Found
+      summary: Get a list of tags for the authenticated user
+      tags:
+      - tags
+    post:
+      consumes:
+      - multipart/form-data
+      description: Create new tags for the authenticated user. The user is identified
+        by the token in the cookie.
+      parameters:
+      - description: Comma-separated list of tag names to create
+        in: formData
+        name: tagnames
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/main.Tag'
+            type: array
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+      summary: Create new tags
+      tags:
+      - tags
+    put:
+      consumes:
+      - multipart/form-data
+      description: Edit existing tags for the authenticated user. The user is identified
+        by the token in the cookie.
+      parameters:
+      - description: Comma-separated list of tag names to edit
+        in: formData
+        name: tagnames
+        required: true
+        type: string
+      - description: Comma-separated list of new tag names
+        in: formData
+        name: newnames
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Tags modified!
+          schema:
+            type: string
+        "404":
+          description: Not Found
+        "412":
+          description: Precondition Failed
+        "500":
+          description: Internal Server Error
+      summary: Edit existing tags
+      tags:
+      - tags
+schemes:
+- http
+- https
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
