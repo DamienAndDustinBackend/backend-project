@@ -12,7 +12,8 @@ import (
 )
 
 type App struct {
-	db *gorm.DB
+	db     *gorm.DB
+	router *gin.Engine
 }
 
 func (app *App) setupRouter() *gin.Engine {
@@ -103,13 +104,13 @@ func setupDatabase() *gorm.DB {
 func main() {
 	db := setupDatabase()
 	app := App{db: db}
-	router := app.setupRouter()
+	app.router = app.setupRouter()
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-	err := router.Run(":" + port)
+	err := app.router.Run(":" + port)
 	if err != nil {
 		panic(err)
 	}

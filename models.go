@@ -17,7 +17,7 @@ type File struct {
 	FilePath    string `gorm:"index"`
 	Tags        []Tag  `gorm:"many2many:file_tags"`
 
-	UserId uint
+	UserID uint
 }
 
 type Tag struct {
@@ -26,7 +26,7 @@ type Tag struct {
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 	Name      string
-	UserId    uint
+	UserID    uint
 
 	Files []File `gorm:"many2many:file_tags"`
 }

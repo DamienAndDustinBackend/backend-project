@@ -39,13 +39,14 @@ func Paginate(r *http.Request) func(db *gorm.DB) *gorm.DB {
 func (app *App) getFiles(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 
+	// Use traditional API for Scopes since generic API doesn't support it yet
 	var files []File
-	result := app.db.Scopes(Paginate(c.Request)).Preload("Tags", nil).Where(&File{UserId: user.ID}).Find(&files)
+	result := app.db.Scopes(Paginate(c.Request)).Preload("Tags", nil).Where(&File{UserID: user.ID}).Find(&files)
 	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+		return
 	}
 	c.JSON(http.StatusOK, files)
-	return
 }
 
 func (app *App) doesFileNameExist(ctx *gin.Context, fileName string) bool {
@@ -55,9 +56,8 @@ func (app *App) doesFileNameExist(ctx *gin.Context, fileName string) bool {
 			return false
 		}
 		panic(err)
-	} else {
-		return true
 	}
+	return true
 }
 
 func (app *App) generateUniqueFileName(ctx *gin.Context) string {
@@ -85,15 +85,15 @@ func (app *App) createFile(c *gin.Context) {
 	tagsString := c.DefaultPostForm("tags", "")
 	var parsedTags []Tag
 	if tagsString != "" {
-		tagIds := strings.Split(tagsString, `,`)
+		tagIDs := strings.Split(tagsString, `,`)
 
-		for _, id := range tagIds {
-			uintId32, err := strconv.ParseUint(id, 10, 32)
+		for _, id := range tagIDs {
+			uintID32, err := strconv.ParseUint(id, 10, 32)
 			if err != nil {
 				panic(err)
 			}
 			parsedTags = append(parsedTags, Tag{
-				ID: uint(uintId32),
+				ID: uint(uintID32),
 			})
 		}
 	}
@@ -116,7 +116,7 @@ func (app *App) createFile(c *gin.Context) {
 		return
 	}
 
-	file := File{Name: fileName, Description: fileDescription, FilePath: uniqueFileName, UserId: user.ID}
+	file := File{Name: fileName, Description: fileDescription, FilePath: uniqueFileName, UserID: user.ID}
 	err = gorm.G[File](app.db).Create(
 		c,
 		&file,
@@ -137,10 +137,9 @@ func (app *App) createFile(c *gin.Context) {
 	}
 
 	// I'm querying the database here to get the updatedAt and createdAt timestamps
-	var fileFromDatabase File
-	tx := app.db.Model(&File{}).Preload("Tags").First(&fileFromDatabase, file.ID)
-	if tx.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": tx.Error})
+	fileFromDatabase, err := gorm.G[File](app.db).Preload("Tags", nil).Where("id = ?", file.ID).First(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -151,14 +150,14 @@ func (app *App) getFile(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 
 	// TODO: There must be a better way
-	fileId, err := strconv.Atoi(c.Param("id"))
+	fileID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	fileIdAsUint := uint(fileId)
+	fileIDAsUint := uint(fileID)
 
-	file, err := gorm.G[File](app.db).Preload("Tags", nil).Where(&File{UserId: user.ID, ID: fileIdAsUint}).First(c)
+	file, err := gorm.G[File](app.db).Preload("Tags", nil).Where(&File{UserID: user.ID, ID: fileIDAsUint}).First(c)
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -176,15 +175,15 @@ func (app *App) getFile(c *gin.Context) {
 func (app *App) deleteFile(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 
-	fileId, err := strconv.Atoi(c.Param("id"))
+	fileID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	fileIdAsUint := uint(fileId)
+	fileIDAsUint := uint(fileID)
 
-	_, err = gorm.G[File](app.db).Where(&File{UserId: user.ID, ID: fileIdAsUint}).Delete(c)
+	_, err = gorm.G[File](app.db).Where(&File{UserID: user.ID, ID: fileIDAsUint}).Delete(c)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -197,12 +196,12 @@ func (app *App) deleteFile(c *gin.Context) {
 func (app *App) updateFile(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 
-	fileId, err := strconv.Atoi(c.Param("id"))
+	fileID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	fileIdAsUint := uint(fileId)
+	fileIDAsUint := uint(fileID)
 
 	var file File
 	if err := c.BindJSON(&file); err != nil {
@@ -210,13 +209,13 @@ func (app *App) updateFile(c *gin.Context) {
 		return
 	}
 
-	_, err = gorm.G[File](app.db).Where(&File{UserId: user.ID, ID: fileIdAsUint}).Updates(c, file)
+	_, err = gorm.G[File](app.db).Where(&File{UserID: user.ID, ID: fileIDAsUint}).Updates(c, file)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	fetchedFile, err := gorm.G[File](app.db).Where(&File{UserId: user.ID, ID: fileIdAsUint}).First(c)
+	fetchedFile, err := gorm.G[File](app.db).Where(&File{UserID: user.ID, ID: fileIDAsUint}).First(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

@@ -1,0 +1,39 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters-settings:
+  testifylint:
+    enable-all: true
+  thelper:
+    test:
+      first: true
+      name: true
+      begin: true
+  testpackage:
+    skip-regexp: (export|internal)_test\.go
+
+linters:
+  enable:
+    - testifylint
+    - thelper
+    - testpackage
+    - tparallel
+    - gofmt
+    - goimports
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - gocritic
+    - revive
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
