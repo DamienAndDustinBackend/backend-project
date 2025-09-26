@@ -6,60 +6,90 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
+
+// getTagNames extracts tag names from a slice of tags
+func getTagNames(tags []Tag) []string {
+	names := make([]string, len(tags))
+	for i, tag := range tags {
+		names[i] = tag.Name
+	}
+	return names
+}
 
 func (app *App) getTags(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
-	var tags []Tag
-	result := app.db.Where(&Tag{UserId: user.ID}).Find(&tags)
 
+	// Use traditional API for Scopes since generic API doesn't support it yet
+	var tags []Tag
+	result := app.db.Scopes(Paginate(c.Request)).Where(&Tag{UserID: user.ID}).Find(&tags)
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Could not find tag(s)"})
 		return
 	}
 
-	c.JSON(http.StatusFound, tags)
-	return
+	c.JSON(http.StatusOK, tags)
 }
 
 func (app *App) createTags(c *gin.Context) {
 	user := c.MustGet(ContextUserKey).(*User)
 	// , is now an unsupported char in tags
-	tagNames := strings.Split(c.PostForm("tagnames"), `,`)
+	tagNamesRaw := c.PostForm("tagnames")
+	if strings.TrimSpace(tagNamesRaw) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Tag names cannot be empty",
+		})
+		return
+	}
+
+	tagNames := strings.Split(tagNamesRaw, `,`)
 	var newTags []Tag
 
 	for _, name := range tagNames {
-		var tag Tag
-		app.db.Find(&tag, "name = ?", name)
+		// Skip empty tag names
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
 
-		if tag.Name != name {
+		// Check if tag already exists
+		_, err := gorm.G[Tag](app.db).Where("name = ?", name).First(c)
+		if err != nil {
+			// Tag doesn't exist, add it to newTags
 			newTags = append(newTags, Tag{
 				Name:   name,
-				UserId: user.ID,
+				UserID: user.ID,
 			})
 		}
 	}
 
-	result := app.db.Create(newTags)
-
-	if result.Error != nil {
+	if len(newTags) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Could not bulk create tags!",
 		})
-
 		return
 	}
 
-	for _, tag := range newTags {
-		result := app.db.First(&tag, "name = ?", tag.Name)
-
-		if result.Error != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": result.Error})
+	// Create tags individually using generic API
+	for i := range newTags {
+		err := gorm.G[Tag](app.db).Create(c, &newTags[i])
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Could not bulk create tags!",
+			})
 			return
 		}
 	}
 
-	c.JSON(http.StatusCreated, newTags)
+	// Fetch the created tags with their IDs
+	createdTags, err := gorm.G[Tag](app.db).Where("user_id = ? AND name IN ?", user.ID, getTagNames(newTags)).Find(c)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, createdTags)
 }
 
 func (app *App) editTags(c *gin.Context) {
@@ -69,28 +99,24 @@ func (app *App) editTags(c *gin.Context) {
 
 	if len(tagNames) != len(newNames) {
 		c.JSON(http.StatusPreconditionFailed, gin.H{"error": "Tag Names and New Names length don't match!"})
+		return
 	}
 
 	for i, name := range tagNames {
-		var tag Tag
-		result := app.db.Where(&Tag{UserId: user.ID, Name: name}).First(&tag)
-
-		if result.Error != nil {
+		tag, err := gorm.G[Tag](app.db).Where(&Tag{UserID: user.ID, Name: name}).First(c)
+		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
 				"error": fmt.Sprintf("Could not find tag '%s'!", name),
 			})
-
 			return
 		}
 
 		tag.Name = newNames[i]
-		result = app.db.Save(&tag)
-
-		if result.Error != nil {
+		_, err = gorm.G[Tag](app.db).Updates(c, tag)
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": fmt.Sprintf("Could not save tag '%s' to the DB!", name),
 			})
-
 			return
 		}
 	}
@@ -103,19 +129,17 @@ func (app *App) deleteTags(c *gin.Context) {
 	tagNames := strings.Split(c.PostForm("tagnames"), `,`)
 
 	for _, name := range tagNames {
-		result := app.db.Where(&Tag{UserId: user.ID, Name: name}).Delete(&Tag{})
-		if result.RowsAffected < 1 {
+		rowsAffected, err := gorm.G[Tag](app.db).Where(&Tag{UserID: user.ID, Name: name}).Delete(c)
+		if rowsAffected < 1 {
 			c.JSON(http.StatusNotFound, gin.H{
 				"error": fmt.Sprintf("Could not delete tag '%s' as it does not exist!", name),
 			})
-
 			return
 		}
-		if result.Error != nil {
+		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": fmt.Sprintf("Could not delete tag '%s'!", name),
 			})
-
 			return
 		}
 	}

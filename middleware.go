@@ -43,7 +43,7 @@ func VerifyJWT(tokenString string) (*jwt.Token, error) {
 	// https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/
 	// It's important to validate the alg is what you expect
 	// TODO: test with alg: none w/o ParseWithClaims
-	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(_ *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 
