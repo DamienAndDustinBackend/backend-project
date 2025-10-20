@@ -47,6 +47,7 @@ func (app *App) setupRouter() *gin.Engine {
 	// files
 	authorized.GET("/files/:id", app.getFile)
 	authorized.GET("/files", app.getFiles)
+	authorized.GET("/files/download/:id", app.downloadFile)
 	authorized.POST("/files", app.createFile)
 	authorized.PATCH("/files/:id", app.updateFile)
 	authorized.DELETE("/files/:id", app.deleteFile)

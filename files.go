@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -45,6 +47,49 @@ func (app *App) getFiles(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, files)
 	return
+}
+
+func (app *App) downloadFile(c *gin.Context) {
+	user := c.MustGet(ContextUserKey).(*User)
+	var databaseFile File
+	result := app.db.Where(&File{UserId: user.ID, Name: c.PostForm("name")}).First(&databaseFile)
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": result.Error})
+		return
+	}
+
+	uploadPath := os.Getenv("UPLOAD_PATH")
+	if uploadPath == "" {
+		uploadPath = "./files"
+	}
+
+
+	file, err := os.Open(uploadPath + "/" + databaseFile.FilePath)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	bytes := make([]byte, stat.Size())
+	_, err = bufio.NewReader(file).Read(bytes)
+	if err != nil && err != io.EOF {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err == io.EOF {
+		fmt.Println("Finished reading file!")
+	}
+
+	c.Header("Content-Disposition", "attachment; filename=" + c.PostForm("name"))
+	c.Data(http.StatusOK, "application/octet-stream", bytes)
 }
 
 func (app *App) doesFileNameExist(ctx *gin.Context, fileName string) bool {
